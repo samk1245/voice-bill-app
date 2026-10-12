@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lumina Logistics AI Playground & Simulator</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-container">
+    
+    <!-- Top App Header -->
+    <header class="app-header">
+      <div class="brand">
+        <div class="logo-icon">L</div>
+        <div class="brand-text">Lumina Logistics AI</div>
+        <span class="brand-badge">Playground</span>
+      </div>
+      
+      <div class="analytics-bar">
+        <div class="metric-item">
+          <span class="metric-label">System Engine</span>
+          <span class="metric-value">
+            <span class="status-dot"></span>
+            Simulator Online
+          </span>
+        </div>
+        <div class="metric-item">
+          <span class="metric-label">RAG Latency</span>
+          <span class="metric-value">124ms</span>
+        </div>
+        <div class="metric-item">
+          <span class="metric-label">Active Agents</span>
+          <span class="metric-value" id="active-agents-count">9 / 9</span>
+        </div>
+        <div class="metric-item">
+          <span class="metric-label">API Guardrails</span>
+          <span class="metric-value" style="color: var(--accent-green);">Active</span>
+        </div>
+      </div>
+      
+      <div class="header-actions">
+        <button class="btn" id="btn-reset-db">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8M21 3v5h-5M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16M3 21v-5h5"/></svg>
+          Reset DB
+        </button>
+        <button class="btn btn-primary" id="btn-export">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+          Export Prompt Config
+        </button>
+      </div>
+    </header>
+
+    <!-- Left Panel: Agents & Configuration -->
+    <aside class="left-panel">
+      <div>
+        <h2 class="section-title">Logistics AI Roles</h2>
+        <div class="agent-list" id="agent-list-container">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <div>
+        <h2 class="section-title">Agent Prompt Settings</h2>
+        <div class="prompt-editor-box">
+          <div class="prompt-editor-header">
+            <span class="slider-label" style="font-weight: 600;">System Persona Prompt</span>
+            <button class="btn" id="btn-copy-prompt" style="padding: 4px 8px; font-size: 0.65rem;">Copy</button>
+          </div>
+          <textarea class="prompt-textarea" id="system-prompt-editor" placeholder="Edit active agent's system prompt..."></textarea>
+          
+          <div class="slider-group">
+            <div class="slider-label">
+              <span>Temperature (Creativity)</span>
+              <span id="temp-val">0.1</span>
+            </div>
+            <input type="range" class="slider-input" id="param-temp" min="0" max="1" step="0.1" value="0.1">
+          </div>
+
+          <div class="slider-group">
+            <div class="slider-label">
+              <span>Context Size (RAG chunks)</span>
+              <span id="chunks-val">3</span>
+            </div>
+            <input type="range" class="slider-input" id="param-chunks" min="1" max="10" step="1" value="3">
+          </div>
+
+          <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.75rem; margin-top: 4px;">
+            <span style="color: var(--text-secondary);">Enforce RAG Guardrails</span>
+            <input type="checkbox" id="param-guardrails" checked style="accent-color: var(--accent-orange); cursor: pointer;">
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Center Panel: Chat Interface -->
+    <main class="center-panel">
+      <!-- Chat Header -->
+      <div class="chat-header">
+        <div class="active-agent-display">
+          <span class="active-agent-dot" id="active-agent-glow"></span>
+          <span class="active-agent-name" id="active-agent-title">Master System Prompt (General Assistant)</span>
+        </div>
+        <button class="btn" id="btn-clear-chat" style="padding: 6px 12px; font-size: 0.75rem;">Clear Chat</button>
+      </div>
+
+      <!-- Messages Container -->
+      <div class="chat-history" id="chat-history-container">
+        <!-- Message bubbles populated by JS -->
+      </div>
+
+      <!-- Multi-Agent Reasoning Trace -->
+      <div class="trace-panel" id="trace-panel">
+        <div class="trace-header" id="trace-toggle-bar">
+          <div class="trace-title">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            Cognitive Routing & RAG Trace
+          </div>
+          <span id="trace-toggle-arrow" style="font-size: 0.8rem; transform: rotate(180deg); transition: transform 0.3s;">▲</span>
+        </div>
+        <div class="trace-content" id="trace-nodes-container">
+          <!-- Populated during chat reasoning -->
+        </div>
+      </div>
+
+      <!-- Input Bar -->
+      <div class="chat-input-area">
+        <div class="suggestion-chips" id="suggestion-chips-container">
+          <!-- Suggestion chips populated by active agent -->
+        </div>
+        <div class="input-box-wrapper">
+          <input type="text" class="chat-input" id="chat-input-field" placeholder="Ask Lumina Logistics AI anything or use chips above..." autocomplete="off">
+          <button class="btn btn-primary" id="btn-send-message" style="padding: 12px 20px;">
+            Send
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </button>
+        </div>
+      </div>
+    </main>
+
+    <!-- Right Panel: Live Enterprise Databases (RAG) -->
+    <section class="right-panel">
+      <div class="panel-header">
+        <h2 class="panel-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-6M3 10h18M3 14h18M10 4v16"/></svg>
+          Enterprise System Sync (RAG)
+        </h2>
+      </div>
+      
+      <div class="db-tabs">
+        <div class="db-tab active" data-tab="shipments">Shipments</div>
+        <div class="db-tab" data-tab="fleet">Fleet Ops</div>
+        <div class="db-tab" data-tab="warehouse">WMS Inventory</div>
+        <div class="db-tab" data-tab="rates">Freight Rates</div>
+        <div class="db-tab" data-tab="sops">Internal SOPs</div>
+      </div>
+
+      <div class="db-content-area" id="db-content-panel">
+        <!-- Content tables dynamically populated by JS -->
+      </div>
+
+      <div style="padding: 12px 16px; background-color: var(--bg-app); border-top: 1px solid var(--border-color); font-size: 0.65rem; color: var(--text-muted); display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 1.1rem; color: var(--accent-orange);">💡</span>
+        <span>Table cells are editable. Click and modify fields to see the AI dynamically retrieve updated values in real-time.</span>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Export Modal -->
+  <div class="modal-overlay" id="export-modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title">Export Production Prompts</h3>
+        <button class="modal-close" id="btn-close-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.8rem; color: var(--text-secondary);">Here is the JSON payload containing the current system prompts, workflow logics, and parameters of the entire logistics multi-agent setup, ready to be copied into your backend environment or LangChain / Semantic Kernel pipelines.</p>
+        <pre class="code-output" id="export-code-box"></pre>
+        <button class="btn btn-primary" id="btn-copy-export">Copy Configuration JSON</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notification Toast -->
+  <div class="toast" id="toast-notify">Prompt settings updated successfully!</div>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,476 @@
+{
+  "schoolInfo": {
+    "schoolName": "Prathmik Vidyalaya Kareli Bagh",
+    "tagline": "Our School • Our Activities • Our Community",
+    "introduction": "Prathmik Vidyalaya Kareli Bagh is a dedicated primary learning institution committed to providing quality foundational education, holistic student development, and a joyful learning atmosphere for young learners in Prayagraj, Uttar Pradesh. (School details can be fully customized by the Administrator).",
+    "vision": "To nurture every child’s potential through experiential learning, positive values, strong literacy, numeracy skills, and inclusive community engagement.",
+    "mission": "To foster a safe, clean, welcoming, and inspiring educational environment where every student thrives with curiosity, respect, and confidence.",
+    "values": [
+      "Child-Centric Learning",
+      "Clean, Safe & Green Campus",
+      "Values & Community Respect",
+      "Holistic Mind & Body Development",
+      "Equal Opportunity for All Learners"
+    ],
+    "address": "Kareli Bagh, Prayagraj, Uttar Pradesh 211016, India",
+    "phone": "School Contact — Update from Admin Panel",
+    "email": "info@karelibagh.edu.in",
+    "mapUrl": "https://maps.google.com/?q=Kareli+Bagh+Prayagraj+Uttar+Pradesh",
+    "timings": "Monday - Saturday: 8:00 AM - 2:00 PM (Sundays & Public Holidays Closed)",
+    "logo": "/logo.svg",
+    "heroImages": [
+      "https://images.unsplash.com/photo-1580582932707-520aed937b7b?auto=format&fit=crop&w=1600&q=80",
+      "https://images.unsplash.com/photo-1577896851231-70ef18881754?auto=format&fit=crop&w=1600&q=80",
+      "https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&w=1600&q=80"
+    ]
+  },
+  "principal": {
+    "name": "Principal — Update from Admin",
+    "photo": "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=800&q=80",
+    "designation": "Headmaster / Principal",
+    "biography": "This profile is a placeholder for the Headmaster/Principal of Prathmik Vidyalaya Kareli Bagh. Please update with verified biographical details, achievements, and educational journey using the school Admin Panel.",
+    "education": "Educational Qualifications — To be updated by Admin",
+    "experience": "Teaching & Leadership Experience — To be updated by Admin",
+    "messageStudents": "Dear children, come to school every day with curiosity in your eyes and kindness in your hearts. Every day is an opportunity to learn something new, make friends, and build your bright future.",
+    "messageParents": "Respected parents and guardians, your partnership with our school is the cornerstone of your child’s success. Together, we can ensure every child feels encouraged, valued, and empowered to reach their highest potential."
+  },
+  "activities": [
+    {
+      "_id": "act_1",
+      "title": "Annual Sports Day & Athletics Meet",
+      "slug": "annual-sports-day-and-athletics-meet",
+      "description": "A vibrant celebration of sportsmanship, physical wellness, and athletic talent featuring relay races, lemon spoon race, sack race, and yoga drills for primary learners.",
+      "category": "Sports",
+      "date": "2026-10-15",
+      "time": "9:00 AM - 1:00 PM",
+      "location": "School Main Playground",
+      "status": "upcoming",
+      "coverImage": "https://images.unsplash.com/photo-1461896836934-ffe607ba8211?auto=format&fit=crop&w=1000&q=80",
+      "images": [
+        "https://images.unsplash.com/photo-1461896836934-ffe607ba8211?auto=format&fit=crop&w=1000&q=80",
+        "https://images.unsplash.com/photo-1526676037777-05a232554f77?auto=format&fit=crop&w=1000&q=80"
+      ],
+      "objectives": "Encourage physical fitness, team camaraderie, and sportsmanship among all children.",
+      "participation": "All primary grade students from Class 1 to Class 5.",
+      "results": "Medals and encouragement certificates will be awarded to all participants.",
+      "teachersInvolved": ["Teacher (Sports Coordinator) — Update from Admin"],
+      "published": true
+    },
+    {
+      "_id": "act_2",
+      "title": "Green Earth Plantation Drive (Poshan Vatika)",
+      "slug": "green-earth-plantation-drive",
+      "description": "Students and teachers planting fruit saplings, flowering shrubs, and vegetable seeds in the school kitchen garden to learn about ecology and environmental care.",
+      "category": "Environmental",
+      "date": "2026-09-20",
+      "time": "10:00 AM - 12:00 PM",
+      "location": "School Poshan Vatika (Kitchen Garden)",
+      "status": "upcoming",
+      "coverImage": "https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=1000&q=80",
+      "images": [
+        "https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=1000&q=80"
+      ],
+      "objectives": "Raise awareness about environmental conservation and develop eco-friendly habits.",
+      "participation": "Eco Club members & Classes 3 to 5.",
+      "results": "50 new saplings planted across the campus.",
+      "teachersInvolved": ["Teacher (Eco Club) — Update from Admin"],
+      "published": true
+    },
+    {
+      "_id": "act_3",
+      "title": "Swachhata Pakhwada — Clean Campus Awareness",
+      "slug": "swachhata-pakhwada-clean-campus-awareness",
+      "description": "A two-week cleanliness initiative where students, teachers, and staff organized handwashing demonstrations, classroom tidying drives, and poster making.",
+      "category": "Awareness programs",
+      "date": "2026-08-18",
+      "time": "8:30 AM - 11:30 AM",
+      "location": "School Assembly Ground & Classrooms",
+      "status": "completed",
+      "coverImage": "https://images.unsplash.com/photo-1577896851231-70ef18881754?auto=format&fit=crop&w=1000&q=80",
+      "images": [
+        "https://images.unsplash.com/photo-1577896851231-70ef18881754?auto=format&fit=crop&w=1000&q=80",
+        "https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&w=1000&q=80"
+      ],
+      "objectives": "Inculcate personal hygiene, proper handwashing rituals, and waste management practices.",
+      "participation": "100% student and teacher participation.",
+      "results": "Classrooms awarded stars for cleanliness; student handwashing monitors recognized.",
+      "teachersInvolved": ["Health & Hygiene In-charge — Update from Admin"],
+      "published": true
+    },
+    {
+      "_id": "act_4",
+      "title": "Primary Science & Math Learning Exhibition",
+      "slug": "primary-science-and-math-learning-exhibition",
+      "description": "Hands-on display of simple math puzzles, model clocks, geometric shapes, and natural science collections created by students from recycled materials.",
+      "category": "Educational",
+      "date": "2026-07-28",
+      "time": "10:00 AM - 1:30 PM",
+      "location": "Activity Hall & Classrooms",
+      "status": "completed",
+      "coverImage": "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&w=1000&q=80",
+      "images": [
+        "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&w=1000&q=80"
+      ],
+      "objectives": "Build foundational numeracy, observational science skills, and joyful problem solving.",
+      "participation": "Classes 2, 3, 4, and 5.",
+      "results": "Over 40 working models and charts presented to parents and visitors.",
+      "teachersInvolved": ["Mathematics & Science Teachers — Update from Admin"],
+      "published": true
+    },
+    {
+      "_id": "act_5",
+      "title": "Independence Day Celebrations & Cultural Program",
+      "slug": "independence-day-celebrations",
+      "description": "Flag hoisting ceremony, national anthem, patriotic group songs, student speeches in Hindi and English, and distribution of mid-day sweets.",
+      "category": "National celebrations",
+      "date": "2026-08-15",
+      "time": "8:00 AM - 11:00 AM",
+      "location": "School Front Courtyard",
+      "status": "completed",
+      "coverImage": "https://images.unsplash.com/photo-1532375810709-75b1da00537c?auto=format&fit=crop&w=1000&q=80",
+      "images": [
+        "https://images.unsplash.com/photo-1532375810709-75b1da00537c?auto=format&fit=crop&w=1000&q=80"
+      ],
+      "objectives": "Foster patriotism, constitutional values, and cultural appreciation.",
+      "participation": "All students, staff, and village education committee members.",
+      "results": "Cultural dances and songs presented with enthusiastic community presence.",
+      "teachersInvolved": ["Cultural Program Committee — Update from Admin"],
+      "published": true
+    }
+  ],
+  "facilities": [
+    {
+      "_id": "fac_1",
+      "name": "Primary Classrooms",
+      "slug": "primary-classrooms",
+      "coverImage": "https://images.unsplash.com/photo-1580582932707-520aed937b7b?auto=format&fit=crop&w=1000&q=80",
+      "images": [
+        "https://images.unsplash.com/photo-1580582932707-520aed937b7b?auto=format&fit=crop&w=1000&q=80",
+        "https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&w=1000&q=80"
+      ],
+      "description": "Well-ventilated, naturally lit, and cheerful classrooms equipped with child-friendly seating, teaching-learning materials (TLM), blackboards, and colorful learning charts.",
+      "features": [
+        "Adequate natural ventilation & daylight",
+        "Child-sized ergonomic benches and desks",
+        "Interactive Teaching-Learning Materials (TLM)",
+        "Clean slate/chalkboards and display boards"
+      ],
+      "importance": "Provides a safe, encouraging space where children spend their core academic hours developing literacy and numeracy.",
+      "displayOrder": 1,
+      "published": true
+    },
+    {
+      "_id": "fac_2",
+      "name": "School Kitchen & Mid-Day Meal Dining",
+      "slug": "school-kitchen-and-dining",
+      "coverImage": "https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&fit=crop&w=1000&q=80",
+      "images": [
+        "https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&fit=crop&w=1000&q=80"
+      ],
+      "description": "Hygienic and dedicated kitchen space adhering to strict government nutrition guidelines for preparing hot, fresh, and nutritious mid-day meals daily.",
+      "features": [
+        "Clean cooking area with LPG stoves",
+        "Safe food grain storage bins",
+        "Dedicated utensils wash & sanitization station",
+        "Daily menu adherence for balanced nutrition"
+      ],
+      "importance": "Ensures every student receives wholesome nutrition, boosting concentration, health, and classroom attendance.",
+      "displayOrder": 2,
+      "published": true
+    },
+    {
+      "_id": "fac_3",
+      "name": "Kitchen Garden (Poshan Vatika)",
+      "slug": "kitchen-garden-poshan-vatika",
+      "coverImage": "https://images.unsplash.com/photo-1585320806297-9794b3e4eeae?auto=format&fit=crop&w=1000&q=80",
+      "images": [
+        "https://images.unsplash.com/photo-1585320806297-9794b3e4eeae?auto=format&fit=crop&w=1000&q=80"
+      ],
+      "description": "An organic garden cultivated on campus where seasonal vegetables and herbs are grown. Serves both as an educational laboratory and a fresh source for meals.",
+      "features": [
+        "Organic vegetables and leafy greens",
+        "Hands-on gardening experience for students",
+        "Composting pit for organic green waste",
+        "Native flower shrubs and biodiversity corner"
+      ],
+      "importance": "Connects students to nature, teaches food origin, and supplements mid-day meals with fresh organic greens.",
+      "displayOrder": 3,
+      "published": true
+    },
+    {
+      "_id": "fac_4",
+      "name": "Playground & Sports Area",
+      "slug": "playground-and-sports-area",
+      "coverImage": "https://images.unsplash.com/photo-1526676037777-05a232554f77?auto=format&fit=crop&w=1000&q=80",
+      "images": [
+        "https://images.unsplash.com/photo-1526676037777-05a232554f77?auto=format&fit=crop&w=1000&q=80"
+      ],
+      "description": "An open, secure outdoor play area where children enjoy daily morning assembly, physical exercise, games like Kho-Kho, Kabaddi, and recreational free play.",
+      "features": [
+        "Secure fenced perimeter",
+        "Sports equipment kit (footballs, skipping ropes, badminton)",
+        "Open space for morning assembly and physical drills",
+        "Shaded perimeter with mature trees"
+      ],
+      "importance": "Essential for motor skills development, teamwork, stress relief, and physical fitness of growing children.",
+      "displayOrder": 4,
+      "published": true
+    },
+    {
+      "_id": "fac_5",
+      "name": "Library Corner & Reading Room",
+      "slug": "library-corner-and-reading-room",
+      "coverImage": "https://images.unsplash.com/photo-1521587760476-6c12a4b040da?auto=format&fit=crop&w=1000&q=80",
+      "images": [
+        "https://images.unsplash.com/photo-1521587760476-6c12a4b040da?auto=format&fit=crop&w=1000&q=80"
+      ],
+      "description": "A cozy reading corner featuring illustrated storybooks in Hindi and English, children’s magazines, folk tales, and beginner encyclopedia volumes.",
+      "features": [
+        "Age-appropriate bilingual storybooks",
+        "Illustrated picture books for early readers",
+        "Weekly reading hour sessions",
+        "Student book borrowing log"
+      ],
+      "importance": "Builds early literacy, language comprehension, and a lifelong passion for reading books.",
+      "displayOrder": 5,
+      "published": true
+    },
+    {
+      "_id": "fac_6",
+      "name": "Safe Drinking Water & Sanitation Facility",
+      "slug": "safe-drinking-water-and-sanitation",
+      "coverImage": "https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?auto=format&fit=crop&w=1000&q=80",
+      "images": [
+        "https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?auto=format&fit=crop&w=1000&q=80"
+      ],
+      "description": "Purified drinking water taps and clean, separate washroom facilities for boys and girls with dedicated handwashing stations.",
+      "features": [
+        "Filtered and tested potable drinking water",
+        "Separate, secure toilets for girls and boys",
+        "Multiple handwash points with soap dispensers",
+        "Regular cleaning and sanitization schedule"
+      ],
+      "importance": "Foundational for health, hygiene, dignity, and student retention, especially for girl students.",
+      "displayOrder": 6,
+      "published": true
+    }
+  ],
+  "teachers": [
+    {
+      "_id": "tch_1",
+      "name": "Assistant Teacher 1 — Update from Admin",
+      "slug": "assistant-teacher-1",
+      "photo": "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=800&q=80",
+      "designation": "Assistant Teacher (Primary)",
+      "subject": "Hindi & Language Skills",
+      "class": "Class 1 & 2",
+      "biography": "Placeholder teacher profile. The school administrator can replace this with the verified teacher name, photograph, subject specialization, and teaching experience.",
+      "experience": "Update teaching experience from Admin Panel",
+      "displayOrder": 1,
+      "published": true
+    },
+    {
+      "_id": "tch_2",
+      "name": "Assistant Teacher 2 — Update from Admin",
+      "slug": "assistant-teacher-2",
+      "photo": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=800&q=80",
+      "designation": "Assistant Teacher (Primary)",
+      "subject": "Mathematics & Mental Math",
+      "class": "Class 3 & 4",
+      "biography": "Placeholder teacher profile. The school administrator can replace this with verified teacher information through the Admin Panel.",
+      "experience": "Update teaching experience from Admin Panel",
+      "displayOrder": 2,
+      "published": true
+    },
+    {
+      "_id": "tch_3",
+      "name": "Assistant Teacher 3 — Update from Admin",
+      "slug": "assistant-teacher-3",
+      "photo": "https://images.unsplash.com/photo-1580894732444-8ecded7900cd?auto=format&fit=crop&w=800&q=80",
+      "designation": "Assistant Teacher (Primary)",
+      "subject": "Environmental Studies & Science",
+      "class": "Class 4 & 5",
+      "biography": "Placeholder teacher profile. The school administrator can update this with verified teacher information.",
+      "experience": "Update teaching experience from Admin Panel",
+      "displayOrder": 3,
+      "published": true
+    },
+    {
+      "_id": "tch_4",
+      "name": "Assistant Teacher 4 — Update from Admin",
+      "slug": "assistant-teacher-4",
+      "photo": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=800&q=80",
+      "designation": "Shiksha Mitra / Assistant Teacher",
+      "subject": "English & Basic Literacy",
+      "class": "Class 2 & 3",
+      "biography": "Placeholder teacher profile. The school administrator can update this with verified teacher information.",
+      "experience": "Update teaching experience from Admin Panel",
+      "displayOrder": 4,
+      "published": true
+    }
+  ],
+  "staff": [
+    {
+      "_id": "stf_1",
+      "name": "Cook-Cum-Helper 1 — Update from Admin",
+      "slug": "cook-cum-helper-1",
+      "photo": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=800&q=80",
+      "role": "Mid-Day Meal Cook",
+      "category": "Kitchen Staff",
+      "description": "Dedicated to preparing fresh, hygienic, and nutritious mid-day meals every morning for our primary students.",
+      "displayOrder": 1,
+      "published": true
+    },
+    {
+      "_id": "stf_2",
+      "name": "Cook-Cum-Helper 2 — Update from Admin",
+      "slug": "cook-cum-helper-2",
+      "photo": "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=800&q=80",
+      "role": "Assistant Meal Helper",
+      "category": "Kitchen Staff",
+      "description": "Assists with kitchen hygiene, vegetable preparation, utensil sanitization, and meal distribution.",
+      "displayOrder": 2,
+      "published": true
+    },
+    {
+      "_id": "stf_3",
+      "name": "Campus Caretaker — Update from Admin",
+      "slug": "campus-caretaker",
+      "photo": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=800&q=80",
+      "role": "Campus Caretaker & Maintenance",
+      "category": "Maintenance Staff",
+      "description": "Maintains campus tidiness, garden care, drinking water supply systems, and classroom cleanliness.",
+      "displayOrder": 3,
+      "published": true
+    },
+    {
+      "_id": "stf_4",
+      "name": "Support Assistant — Update from Admin",
+      "slug": "support-assistant",
+      "photo": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80",
+      "role": "Student Welfare & Support",
+      "category": "Support Staff",
+      "description": "Assists with student arrival, safe dispersal, playground supervision, and classroom logistics.",
+      "displayOrder": 4,
+      "published": true
+    }
+  ],
+  "announcements": [
+    {
+      "_id": "ann_1",
+      "title": "Admissions Open for Academic Session 2026-27",
+      "slug": "admissions-open-academic-session-2026-27",
+      "description": "Admissions are now open for Class 1 to Class 5 at Prathmik Vidyalaya Kareli Bagh. Parents and guardians are requested to visit the school office with the child’s Aadhaar card, birth certificate, and photographs during working hours.",
+      "image": "https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&w=1000&q=80",
+      "date": "2026-09-01",
+      "pinned": true,
+      "published": true
+    },
+    {
+      "_id": "ann_2",
+      "title": "Monthly Parent-Teacher Meeting (PTM) Scheduled",
+      "slug": "monthly-parent-teacher-meeting",
+      "description": "The monthly parent-teacher meeting will be held on the last working Saturday of the month. We invite all parents to review student workbooks, discuss progress, and explore the school campus.",
+      "image": "",
+      "date": "2026-08-25",
+      "pinned": true,
+      "published": true
+    },
+    {
+      "_id": "ann_3",
+      "title": "Free Textbook & Notebook Distribution Complete",
+      "slug": "free-textbook-distribution-complete",
+      "description": "All registered students of Classes 1 through 5 have received government-provided textbooks and exercise notebooks. Please ensure children bring their books according to the daily timetable.",
+      "image": "",
+      "date": "2026-08-10",
+      "pinned": false,
+      "published": true
+    },
+    {
+      "_id": "ann_4",
+      "title": "School Timing Notice for Summer/Monsoon Season",
+      "slug": "school-timing-notice",
+      "description": "Notice regarding school opening and closing hours as prescribed by the Basic Education Department. Morning assembly begins sharply at 8:00 AM. Please ensure students arrive on time.",
+      "image": "",
+      "date": "2026-07-15",
+      "pinned": false,
+      "published": true
+    }
+  ],
+  "gallery": [
+    {
+      "_id": "gal_1",
+      "image": "https://images.unsplash.com/photo-1580582932707-520aed937b7b?auto=format&fit=crop&w=1200&q=80",
+      "title": "Primary Classroom Learning",
+      "caption": "Joyful learning environment inside our primary classroom.",
+      "category": "Classrooms",
+      "date": "2026-08-20"
+    },
+    {
+      "_id": "gal_2",
+      "image": "https://images.unsplash.com/photo-1577896851231-70ef18881754?auto=format&fit=crop&w=1200&q=80",
+      "title": "Morning Assembly & Prayer",
+      "caption": "Students gathered for morning assembly, prayer, and pledge.",
+      "category": "School",
+      "date": "2026-08-18"
+    },
+    {
+      "_id": "gal_3",
+      "image": "https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=1200&q=80",
+      "title": "Kitchen Garden Plantation",
+      "caption": "Caring for young vegetable plants in Poshan Vatika.",
+      "category": "Garden",
+      "date": "2026-08-12"
+    },
+    {
+      "_id": "gal_4",
+      "image": "https://images.unsplash.com/photo-1461896836934-ffe607ba8211?auto=format&fit=crop&w=1200&q=80",
+      "title": "Sports Day Sprint Race",
+      "caption": "Enthusiastic participation in athletics and team games.",
+      "category": "Activities",
+      "date": "2026-07-25"
+    },
+    {
+      "_id": "gal_5",
+      "image": "https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&fit=crop&w=1200&q=80",
+      "title": "Mid-Day Meal Preparation",
+      "caption": "Clean and wholesome meal preparation in our school kitchen.",
+      "category": "Kitchen",
+      "date": "2026-08-05"
+    },
+    {
+      "_id": "gal_6",
+      "image": "https://images.unsplash.com/photo-1521587760476-6c12a4b040da?auto=format&fit=crop&w=1200&q=80",
+      "title": "Library Reading Hour",
+      "caption": "Students exploring illustrated Hindi and English storybooks.",
+      "category": "Students",
+      "date": "2026-08-01"
+    },
+    {
+      "_id": "gal_7",
+      "image": "https://images.unsplash.com/photo-1532375810709-75b1da00537c?auto=format&fit=crop&w=1200&q=80",
+      "title": "Independence Day Tricolor",
+      "caption": "Celebration of national pride and cultural unity.",
+      "category": "Celebrations",
+      "date": "2026-08-15"
+    },
+    {
+      "_id": "gal_8",
+      "image": "https://images.unsplash.com/photo-1526676037777-05a232554f77?auto=format&fit=crop&w=1200&q=80",
+      "title": "Playground Free Play",
+      "caption": "Healthy physical exercise and outdoor fun in the sun.",
+      "category": "Playground",
+      "date": "2026-07-10"
+    }
+  ],
+  "adminUsers": [
+    {
+      "_id": "adm_1",
+      "email": "admin@karelibagh.edu.in",
+      "name": "School Administrator",
+      "role": "admin",
+      "passwordHash": "$2a$10$wT2v2s9jJkMtz98qE7P3c.m1oEvrU41F3wQoA4Jp4pY/EcmMhLg12",
+      "createdAt": "2026-09-04T00:00:00.000Z"
+    }
+  ]
+}

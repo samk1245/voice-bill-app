@@ -1,0 +1,640 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+:root {
+  --bg-dark: #05070c;
+  --bg-panel: #0a0d15;
+  --bg-surface: #101422;
+  --bg-surface-hover: #161c2e;
+  --border-glow: rgba(0, 255, 136, 0.15);
+  
+  --primary: #00ff88;
+  --primary-glow: rgba(0, 255, 136, 0.2);
+  --secondary: #00e5ff;
+  --secondary-glow: rgba(0, 229, 255, 0.2);
+  
+  --text-main: #f1f5f9;
+  --text-sub: #94a3b8;
+  --text-dark: #64748b;
+  
+  --font-display: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-code: 'JetBrains Mono', monospace;
+  
+  --transition: 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  --radius-lg: 16px;
+  --radius-md: 10px;
+  --radius-sm: 6px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-display);
+  background-color: var(--bg-dark);
+  color: var(--text-main);
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* App Layout */
+.app-header {
+  height: 60px;
+  background-color: var(--bg-panel);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-icon {
+  width: 28px;
+  height: 28px;
+  background: radial-gradient(circle, var(--primary), #00b3ff);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 15px var(--primary);
+  position: relative;
+}
+
+.brand-icon::after {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  right: -4px;
+  bottom: -4px;
+  border: 1px solid var(--primary);
+  border-radius: 50%;
+  opacity: 0.4;
+  animation: radar-pulse-header 2s infinite linear;
+}
+
+@keyframes radar-pulse-header {
+  0% { transform: scale(1); opacity: 0.4; }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+
+.brand-title {
+  font-weight: 700;
+  font-size: 1.15rem;
+  letter-spacing: -0.5px;
+  background: linear-gradient(135deg, var(--text-main), #cbd5e1);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.system-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  background: rgba(0, 255, 136, 0.05);
+  border: 1px solid rgba(0, 255, 136, 0.1);
+  padding: 4px 10px;
+  border-radius: 20px;
+  color: var(--primary);
+}
+
+.system-dot {
+  width: 6px;
+  height: 6px;
+  background-color: var(--primary);
+  border-radius: 50%;
+  box-shadow: 0 0 8px var(--primary);
+  animation: pulse-dot 1.5s infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+.main-container {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 360px 1fr 340px;
+  height: calc(100vh - 60px);
+  overflow: hidden;
+}
+
+/* Control Panel (Left Side) */
+.control-panel {
+  background-color: var(--bg-panel);
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  gap: 20px;
+  overflow-y: auto;
+}
+
+.card {
+  background-color: var(--bg-surface);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.card-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-sub);
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding-bottom: 8px;
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.input-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-sub);
+}
+
+.phone-input-wrapper {
+  display: flex;
+  gap: 8px;
+}
+
+.phone-input {
+  flex: 1;
+  background-color: var(--bg-dark);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-sm);
+  color: var(--text-main);
+  padding: 10px 12px;
+  font-family: var(--font-code);
+  font-size: 0.85rem;
+  outline: none;
+  transition: var(--transition);
+}
+
+.phone-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 10px var(--primary-glow);
+}
+
+.btn {
+  background-color: var(--bg-surface-hover);
+  color: var(--text-main);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-sm);
+  padding: 10px 16px;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.8rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: var(--transition);
+}
+
+.btn:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+  border-color: var(--text-sub);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary), #00d977);
+  color: #030708;
+  border: none;
+  box-shadow: 0 4px 15px rgba(0, 255, 136, 0.2);
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(0, 255, 136, 0.35);
+  background: linear-gradient(135deg, var(--primary), #00ffaa);
+}
+
+.btn-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Metadata Grid */
+.meta-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  font-size: 0.75rem;
+}
+
+.meta-item {
+  background-color: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.02);
+  padding: 8px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+}
+
+.meta-lbl {
+  color: var(--text-dark);
+  font-weight: 600;
+}
+
+.meta-val {
+  color: var(--text-main);
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+/* Tracking Stats (Speedometer / Battery / Telemetry) */
+.telemetry-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.telemetry-node {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.telemetry-icon {
+  font-size: 1.25rem;
+}
+
+.telemetry-data {
+  display: flex;
+  flex-direction: column;
+}
+
+.telemetry-val {
+  font-family: var(--font-code);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--secondary);
+}
+
+/* Radar Logs */
+.log-box {
+  background-color: var(--bg-dark);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-sm);
+  padding: 10px;
+  height: 140px;
+  overflow-y: auto;
+  font-family: var(--font-code);
+  font-size: 0.7rem;
+  line-height: 1.4;
+  color: var(--text-sub);
+}
+
+.log-entry {
+  margin-bottom: 6px;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.02);
+  padding-bottom: 4px;
+}
+
+.log-entry.success { color: var(--primary); }
+.log-entry.info { color: var(--secondary); }
+.log-entry.warning { color: #facc15; }
+
+/* Radar Scan Animations in Map Center */
+.radar-map-wrapper {
+  position: relative;
+  grid-column: 2;
+  height: 100%;
+}
+
+#map-container {
+  height: 100%;
+  width: 100%;
+  background-color: var(--bg-dark);
+  z-index: 1;
+}
+
+/* Dark mode tiles styling filter */
+.leaflet-tile-container {
+  filter: invert(100%) hue-rotate(185deg) brightness(85%) contrast(92%) saturate(80%);
+}
+
+.leaflet-bar a {
+  background-color: var(--bg-surface) !important;
+  color: var(--text-main) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+}
+
+/* Simulated Radar Sweeper Overlay */
+.radar-sweeper {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(circle, transparent 40%, rgba(5, 7, 12, 0.8) 75%),
+              linear-gradient(rgba(0, 255, 136, 0.02) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(0, 255, 136, 0.02) 1px, transparent 1px);
+  background-size: 100% 100%, 30px 30px, 30px 30px;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.radar-sweeper::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 90%;
+  height: 90%;
+  border: 1px solid rgba(0, 255, 136, 0.1);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.radar-line {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 45%;
+  height: 45%;
+  background: linear-gradient(45deg, rgba(0, 255, 136, 0.12) 0%, transparent 80%);
+  transform-origin: top left;
+  border-left: 1px solid rgba(0, 255, 136, 0.4);
+  border-radius: 0 100% 0 0;
+  pointer-events: none;
+  animation: sweep 8s infinite linear;
+}
+
+@keyframes sweep {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Device Simulator Panel (Right Side) */
+.device-panel {
+  background-color: var(--bg-panel);
+  border-left: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  overflow: hidden;
+}
+
+/* Mock iPhone Case styling */
+.phone-mockup {
+  width: 290px;
+  height: 580px;
+  background-color: #030406;
+  border: 10px solid #1a1e27;
+  border-radius: 36px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 30px rgba(0, 255, 136, 0.05);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Dynamic Island/Speaker Notch */
+.phone-notch {
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100px;
+  height: 18px;
+  background-color: #000;
+  border-radius: 10px;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.phone-notch-camera {
+  width: 8px;
+  height: 8px;
+  background-color: #0b1528;
+  border-radius: 50%;
+  margin-left: 12px;
+}
+
+/* Phone Screen Area */
+.phone-screen {
+  flex: 1;
+  background-color: #0d0e12;
+  display: flex;
+  flex-direction: column;
+  padding: 30px 12px 12px 12px; /* Extra padding top for notch */
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  overflow: hidden;
+}
+
+/* Phone Status Bar */
+.phone-status-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.65rem;
+  color: #fff;
+  opacity: 0.8;
+  padding: 0 4px 6px 4px;
+  margin-top: -10px;
+  margin-bottom: 10px;
+}
+
+/* Simulated SMS Messaging View */
+.sms-app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.sms-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 8px;
+  margin-bottom: 12px;
+}
+
+.sms-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--secondary), #a855f7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: white;
+}
+
+.sms-name {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: white;
+}
+
+.sms-body {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sms-bubble {
+  max-width: 85%;
+  padding: 8px 12px;
+  border-radius: 14px;
+  font-size: 0.7rem;
+  line-height: 1.3;
+}
+
+.sms-bubble.incoming {
+  background-color: #26262b;
+  color: #fff;
+  align-self: flex-start;
+  border-bottom-left-radius: 2px;
+}
+
+.sms-bubble.outgoing {
+  background-color: #0b84ff;
+  color: white;
+  align-self: flex-end;
+  border-bottom-right-radius: 2px;
+}
+
+.sms-link {
+  color: #38bdf8;
+  text-decoration: underline;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+/* Simulated Portal App View */
+.location-portal {
+  display: none; /* Shown when consent link clicked */
+  flex-direction: column;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 16px;
+  padding: 10px;
+}
+
+.portal-logo {
+  width: 48px;
+  height: 48px;
+  background-color: rgba(0, 255, 136, 0.1);
+  border: 1px dashed var(--primary);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary);
+  font-size: 1.5rem;
+  animation: portal-logo-pulse 2s infinite;
+}
+
+@keyframes portal-logo-pulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0, 255, 136, 0.2); }
+  50% { transform: scale(1.05); box-shadow: 0 0 15px rgba(0, 255, 136, 0.4); }
+}
+
+.portal-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: white;
+}
+
+.portal-desc {
+  font-size: 0.7rem;
+  color: var(--text-sub);
+  line-height: 1.4;
+}
+
+/* Custom Alert Notification Banner inside Simulator */
+.portal-toast {
+  background: rgba(0, 255, 136, 0.1);
+  border: 1px solid var(--primary);
+  color: var(--primary);
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 0.65rem;
+  font-weight: 600;
+  width: 100%;
+  display: none;
+}
+
+/* Toast Alerts Desktop */
+.toast {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  background: var(--bg-surface);
+  border-left: 4px solid var(--primary);
+  color: var(--text-main);
+  padding: 12px 18px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  z-index: 1000;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  transform: translateY(100px);
+  opacity: 0;
+  transition: var(--transition);
+}
+
+.toast.active {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.accuracy-ring {
+  border: 2px dashed var(--primary);
+  border-radius: 50%;
+  background: rgba(0, 255, 136, 0.1);
+  animation: pulse-ring 2.5s infinite;
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(0.9); opacity: 0.4; }
+  100% { transform: scale(1.1); opacity: 0.8; }
+}

@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lumina Live Phone Geolocation Radar</title>
+  <!-- Leaflet.js Maps CSS (Simplified links to prevent integrity hash issues) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Top App Header -->
+  <header class="app-header">
+    <div class="brand">
+      <div class="brand-icon">🛰️</div>
+      <div class="brand-title">Lumina GPS Geolocation Control</div>
+    </div>
+    <div class="system-status">
+      <span class="system-dot"></span>
+      Network: ONLINE
+    </div>
+  </header>
+
+  <!-- Main Tracking Console -->
+  <div class="main-container">
+
+    <!-- Left Column: Controls & Metadata -->
+    <aside class="control-panel">
+      
+      <!-- Target Configuration -->
+      <div class="card">
+        <h3 class="card-title">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 9.75v7.17z"/></svg>
+          Target Phone Info
+        </h3>
+        <div class="input-group">
+          <span class="input-label">Mobile Number</span>
+          <div class="phone-input-wrapper">
+            <select id="country-code" class="phone-input" style="flex: 0 0 80px; text-align: center; padding: 10px 4px;">
+              <option value="+1">+1 (US)</option>
+              <option value="+44">+44 (UK)</option>
+              <option value="+91">+91 (IN)</option>
+              <option value="+61">+61 (AU)</option>
+            </select>
+            <input type="tel" class="phone-input" id="target-phone" placeholder="555-0199" autocomplete="off" value="555-0199">
+          </div>
+        </div>
+        <button class="btn btn-primary" id="btn-locate" style="width: 100%; gap: 8px;">
+          <span>⚡ LOCATE LIVE TARGET</span>
+        </button>
+      </div>
+
+      <!-- Carrier Metadata Results -->
+      <div class="card" id="carrier-card" style="opacity: 0.5; transition: opacity 0.3s;">
+        <h3 class="card-title">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          HLR Carrier Registry
+        </h3>
+        <div class="meta-grid">
+          <div class="meta-item">
+            <span class="meta-lbl">Country Origin</span>
+            <span class="meta-val" id="meta-country">--</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-lbl">Network Provider</span>
+            <span class="meta-val" id="meta-carrier">--</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-lbl">Line Type</span>
+            <span class="meta-val" id="meta-type">--</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-lbl">HLR Status</span>
+            <span class="meta-val" id="meta-status">Inactive</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live GPS Telemetry -->
+      <div class="card" id="telemetry-card" style="opacity: 0.5; transition: opacity 0.3s;">
+        <h3 class="card-title">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2a10 10 0 0 0-10 10c0 5.25 10 12 10 12s10-6.75 10-12a10 10 0 0 0-10-10z"/><circle cx="12" cy="10" r="3"/></svg>
+          Live Telemetry Feed
+        </h3>
+        <div class="telemetry-grid">
+          <div class="telemetry-node">
+            <span class="telemetry-icon">🔋</span>
+            <div class="telemetry-data">
+              <span class="meta-lbl" style="font-size: 0.6rem;">Battery Status</span>
+              <span class="telemetry-val" id="tele-battery">--</span>
+            </div>
+          </div>
+          <div class="telemetry-node">
+            <span class="telemetry-icon">📡</span>
+            <div class="telemetry-data">
+              <span class="meta-lbl" style="font-size: 0.6rem;">Signal Quality</span>
+              <span class="telemetry-val" id="tele-signal">--</span>
+            </div>
+          </div>
+          <div class="telemetry-node">
+            <span class="telemetry-icon">🏃</span>
+            <div class="telemetry-data">
+              <span class="meta-lbl" style="font-size: 0.6rem;">Current Speed</span>
+              <span class="telemetry-val" id="tele-speed">--</span>
+            </div>
+          </div>
+          <div class="telemetry-node">
+            <span class="telemetry-icon">🎯</span>
+            <div class="telemetry-data">
+              <span class="meta-lbl" style="font-size: 0.6rem;">Accuracy Range</span>
+              <span class="telemetry-val" id="tele-accuracy">--</span>
+            </div>
+          </div>
+        </div>
+        <div style="font-size: 0.7rem; color: var(--text-dark); margin-top: 4px; display: flex; justify-content: space-between;">
+          <span>Lat: <strong id="tele-lat" style="color:var(--text-main)">--</strong></span>
+          <span>Lng: <strong id="tele-lng" style="color:var(--text-main)">--</strong></span>
+        </div>
+      </div>
+
+      <!-- Live Pings Log -->
+      <div class="card">
+        <h3 class="card-title">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/></svg>
+          System Event Logs
+        </h3>
+        <div class="log-box" id="system-logs">
+          <div class="log-entry info">System initialized. Enter mobile number above and click Locate Target to begin.</div>
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- Center Column: Radar Screen & Maps (Now takes full remaining width) -->
+    <main class="radar-map-wrapper" style="grid-column: 2;">
+      <div class="radar-sweeper">
+        <div class="radar-line" id="radar-sweep-line" style="display: none;"></div>
+      </div>
+      <div id="map-container"></div>
+    </main>
+
+  </div>
+
+  <!-- Notification Toast -->
+  <div class="toast" id="desktop-toast">Carrier Network synced.</div>
+
+  <!-- Leaflet.js Maps Script (Simplified to prevent CORS/Integrity loading errors) -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Custom App Script -->
+  <script src="app.js"></script>
+</body>
+</html>
