@@ -1,36 +1,84 @@
-# VoiceBill AI (voice-bill-app)
+# VoiceBill AI (voice-bill-app) 🚀
 
-VoiceBill AI is a modern, simple, and fast mobile-first voice-powered billing and ledger application for local shops and small businesses.
+VoiceBill AI is a modern, simple, and fast mobile-first and desktop POS voice-powered billing and ledger application for local shops and small businesses.
 
-## Key Features
+---
 
-- **Voice Billing**: Create bills/invoices simply by speaking naturally in Hindi, English, or Hinglish (e.g. *"Ramesh ko do kilo chawal, ek kilo cheeni aur paanch biscuit dena"*).
-- **Intelligent NLP Parser**: Extracts customer name, products, quantities, units (kg, g, packet, piece, bottle, etc.), discounts, and calculates GST & totals.
-- **Smart Ambiguity Resolver**: Prompts the user when a product match is ambiguous (e.g. Parle-G 50g vs Parle-G 100g).
-- **Inventory Management**: Add products via voice or manual form, adjust stock, low-stock warnings, barcode scanner simulator.
-- **Khata / Udhaar Ledger**: Customer credit tracker, ledger transaction history, payment recordings, and WhatsApp reminder links.
-- **AI Sales Assistant**: Query sales insights, top-selling items, and low-stock alerts with interactive charts.
-- **Offline Mode**: Works seamlessly offline using client-side NLP and buffers transactions for auto-sync.
-- **Multi-Shop & Multi-Role**: Supports multiple store management with Owner and Cashier roles.
+## 🌟 Advanced Features (v2.0 Upgrade)
 
-## Tech Stack
+### 1. Dual Interface: Mobile Shell & Counter POS Widescreen Mode
+- **📱 Mobile App View**: Simulated phone interface with realistic status bar, notch, and navigation.
+- **🖥️ Desktop / Tablet POS Counter**: Full widescreen 3-column retail billing counter (Voice Assistant + Quick Touch Product Bar on left, Live Cart & Financials in center, Customer Ledger & Inventory on right).
 
-- **Frontend**: React (Vite), Tailwind CSS, Lucide Icons, Recharts, Redux Toolkit
-- **Backend**: Node.js & Express
-- **Database**: Local JSON database fallback (`db_fallback.json`) & Mongoose/MongoDB compatible
+### 2. Real Web Speech Recognition & Audio Wave Visualizer
+- Powered by native browser `SpeechRecognition` / `webkitSpeechRecognition` with real-time waveform animation.
+- Multilingual speech-to-text in **Hindi, English, and Hinglish**.
 
-## Getting Started
+### 3. Voice Talkback (TTS) & Retail POS Audio Feedback
+- **Speech Synthesis (TTS)**: VoiceBill speaks back in Indian Hindi/English to confirm added items, total bill, or cash change (e.g. *"2 kilo chawal bill mein add ho gaya. Total bill ₹150"*).
+- **Zero-Latency Retail Sound Effects**: Crisp 1800Hz barcode scanner beeps, cash drawer completion chimes, and delete sweeps synthesized directly via Web Audio API.
 
-### 1. Start Dev Servers
+### 4. Conversational Voice Commands & Multi-Turn Editing
+- **Add Items**: *"Ramesh ko do kilo chawal aur teen packet biscuit dena"*
+- **Item Removal**: *"Chawal hata do"*, *"Maggi remove karo"*
+- **Quantity Update**: *"Chawal 3 kilo kar do"*, *"Maggi 5 packet kar do"*
+- **Discounts**: *"10 rupaye discount laga do"*
+- **Cash & Change Calculation**: *"Customer ne 500 cash diya"* -> automatically computes change.
+- **Credit / Udhaar**: *"Ramesh ne 1000 rupaye udhaar liye"* -> updates ledger.
+- **Voice Actions**: *"Bill confirm karo"*, *"Invoice print karo"*, *"WhatsApp par bhejo"*.
+
+### 5. Smart Ambiguity Resolver
+- Automatically pauses and presents interactive choices when a voice query matches multiple product sizes (e.g. *"Parle-G add karo"* prompts between *Parle-G 50g (₹5)* and *Parle-G 100g (₹10)*).
+
+### 6. Thermal POS Receipt & Dynamic UPI QR Code
+- **🧾 58mm / 80mm Thermal Slip**: Authentic supermarket receipt styling with serrated edges, item breakdown, and barcode.
+- **📄 GST Tax Invoice**: Standard A4 invoice format.
+- **📱 Scan & Pay UPI QR Code**: Dynamic QR code encoding store UPI ID, customer name, and bill amount (`upi://pay?pa=...`).
+- **One-Click WhatsApp Sharing**: Instant pre-composed bill share link.
+
+### 7. Fast Touch POS Keypad
+- Quick 1-tap addition for daily grocery staples (Basmati Rice, Sugar, Aata, Maggi, Coca Cola, Parle-G, Tata Salt, Dettol Soap).
+
+### 8. Customer Khata & WhatsApp Payment Reminders
+- Customer credit ledger tracking pending balances and historical payments.
+- One-click formatted WhatsApp payment reminders with shop UPI ID.
+
+### 9. AI Sales Assistant
+- Conversational analytics: *"Aaj ki sale kitni hui?"*, *"Is hafte sabse zyada kya bika?"*, *"Kaunsa product stock mein kam hai?"*.
+- Dynamic charts and business metrics powered by Recharts.
+
+### 10. Offline-First Mode
+- Full client-side NLP fallback (`nlpParser.js`) and local storage queueing. Works seamlessly with zero internet and synchronizes automatically when reconnected.
+
+---
+
+## 🛠️ Tech Stack
+
+- **Frontend**: React 18, Vite, Tailwind CSS, Lucide Icons, Recharts, Redux Toolkit
+- **Backend**: Node.js, Express, Helmet, CORS, JWT Auth
+- **Database**: Local JSON database fallback (`db_fallback.json`) & MongoDB / Mongoose support
+- **Audio & Speech**: Web Speech API (`SpeechRecognition` & `SpeechSynthesis`) + Web Audio API synthesizer
+
+---
+
+## 🚀 How to Run Locally
+
+### Option 1: Quick Launcher (Windows)
+Double-click `start-dev.bat` or run:
+```powershell
+.\start-dev.ps1
+```
+
+### Option 2: Manual Start
 ```bash
-# Start backend API (Port 5000)
+# 1. Start Backend API (Port 5000)
 cd backend
 npm install
 node server.js
 
-# Start frontend client (Port 5173)
+# 2. Start Frontend Client (Port 5173)
 cd frontend
 npm install
 npm run dev -- --config vite.config.cjs
 ```
-Alternatively, run `start-dev.bat` or `start-dev.ps1` from the project root.
+Open **`http://localhost:5173`** in your browser.

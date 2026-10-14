@@ -1,5 +1,6 @@
-// Multilingual voice-command parser running entirely on the client
-// Supports offline mode parsing, mapping numbers, units, products, credit terms, and cash payments.
+// Advanced Multilingual voice-command parser running on the client
+// Supports offline mode parsing, mapping numbers, units, products, credit terms, cash payments,
+// item removals, quantity modifications, and voice-triggered invoice actions.
 
 const numberMap = {
   'ek': 1, 'one': 1, '1': 1,
@@ -47,7 +48,79 @@ const parseUnit = (word) => {
 export const parseVoiceCommand = (text, products = [], customers = []) => {
   const queryText = text.toLowerCase().trim();
 
-  // 1. Sales Assistant Queries
+  // 1. Direct Voice Action Commands
+  if (queryText.includes('clear') || queryText.includes('khali karo') || queryText.includes('sab hata do')) {
+    return {
+      intent: 'action',
+      action: 'clear_cart',
+      message: 'Cart cleared by voice'
+    };
+  }
+
+  if (queryText.includes('print karo') || queryText.includes('invoice print')) {
+    return {
+      intent: 'action',
+      action: 'print_bill',
+      message: 'Print bill command triggered'
+    };
+  }
+
+  if (queryText.includes('whatsapp') && (queryText.includes('bhejo') || queryText.includes('share') || queryText.includes('send'))) {
+    return {
+      intent: 'action',
+      action: 'whatsapp_share',
+      message: 'WhatsApp share command triggered'
+    };
+  }
+
+  if (
+    (queryText.includes('bill') || queryText.includes('order')) && 
+    (queryText.includes('confirm') || queryText.includes('generate') || queryText.includes('banao') || queryText.includes('done'))
+  ) {
+    return {
+      intent: 'action',
+      action: 'confirm_bill',
+      message: 'Confirm bill command triggered'
+    };
+  }
+
+  // 2. Item Removal Commands: "chawal hata do", "remove biscuit", "maggi delete karo"
+  if (queryText.includes('hata do') || queryText.includes('remove') || queryText.includes('delete karo') || queryText.includes('cancel karo')) {
+    let target = queryText
+      .replace(/hata do|remove|delete karo|cancel karo|se|ko|cart/g, '')
+      .trim();
+
+    // Match with products
+    const matched = products.find(p => p.name.toLowerCase().includes(target) || target.includes(p.name.toLowerCase()));
+    return {
+      intent: 'remove_item',
+      productName: matched ? matched.name : target,
+      productId: matched ? matched._id : null,
+      message: `Item removal triggered for: ${matched ? matched.name : target}`
+    };
+  }
+
+  // 3. Quantity Update Commands: "chawal 3 kilo kar do", "maggi 5 packet kar do"
+  const updateMatch = queryText.match(/([a-z\s]+?)\s+(\d+|ek|do|teen|chaar|paanch|chhe|saat|aath|nau|das|bees)\s*(kilo|kg|packet|piece|bottle|gram|litre)?\s*(?:kar do|karo|change)/);
+  if (updateMatch && !queryText.includes('add') && !queryText.includes('dena')) {
+    const rawProd = updateMatch[1].trim();
+    const qty = parseNumber(updateMatch[2]);
+    const unit = parseUnit(updateMatch[3]);
+    const matched = products.find(p => p.name.toLowerCase().includes(rawProd) || rawProd.includes(p.name.toLowerCase()));
+
+    if (matched) {
+      return {
+        intent: 'update_qty',
+        productId: matched._id,
+        productName: matched.name,
+        quantity: qty,
+        unit: unit || matched.unit,
+        message: `Updated quantity for ${matched.name} to ${qty}`
+      };
+    }
+  }
+
+  // 4. Sales Assistant Queries
   if (
     queryText.includes('sale') || 
     queryText.includes('bik') || 
@@ -71,7 +144,7 @@ export const parseVoiceCommand = (text, products = [], customers = []) => {
     };
   }
 
-  // 2. Payments & Cash Change Calculations
+  // 5. Payments & Cash Change Calculations
   const cashDiyaMatch = queryText.match(/(?:customer ne\s+)?(\d+|ek|do|teen|paanch|sau|hundred)\s*(?:rupaye|rs|rupya|rupees)?\s*(?:cash|diye|diya)/);
   if (cashDiyaMatch) {
     const cashReceived = parseNumber(cashDiyaMatch[1]);
@@ -83,7 +156,7 @@ export const parseVoiceCommand = (text, products = [], customers = []) => {
     };
   }
 
-  // 3. Credit/Udhaar Commands
+  // 6. Credit/Udhaar Commands
   if (queryText.includes('udhaar') || queryText.includes('credit') || queryText.includes('khata')) {
     let customerName = null;
     let amount = null;
@@ -110,7 +183,7 @@ export const parseVoiceCommand = (text, products = [], customers = []) => {
     }
   }
 
-  // 4. Discounts
+  // 7. Discounts
   const discountMatch = queryText.match(/(\d+|ek|do|teen|paanch|sau|hundred)\s*(?:rupaye|rs|rupya|rupees)?\s*(?:discount|off|kam)/);
   if (discountMatch) {
     const discount = parseNumber(discountMatch[1]);
@@ -121,7 +194,7 @@ export const parseVoiceCommand = (text, products = [], customers = []) => {
     };
   }
 
-  // 5. Add Product Voice Command
+  // 8. Add Product Voice Command
   if (queryText.includes('naya product') || queryText.includes('add product') || queryText.includes('new product')) {
     let productName = '';
     let price = 0;
@@ -149,7 +222,7 @@ export const parseVoiceCommand = (text, products = [], customers = []) => {
     }
   }
 
-  // 6. Add Customer Command
+  // 9. Add Customer Command
   if (queryText.includes('customer') && (queryText.includes('naya') || queryText.includes('new') || queryText.includes('add'))) {
     const nameMatch = text.match(/(?:naam|name|customer)\s+([A-Za-z]+)/i);
     const mobileMatch = queryText.match(/(?:phone|mobile|number)?\s*([6-9]\d{9})/);
@@ -165,7 +238,7 @@ export const parseVoiceCommand = (text, products = [], customers = []) => {
     }
   }
 
-  // 7. Core Invoice Billing Parser (Extract products, quantities, units)
+  // 10. Core Invoice Billing Parser (Extract products, quantities, units)
   const sentences = queryText.split(/(?:aur|and|,|dena|\+)/);
   const items = [];
   const clarifications = [];

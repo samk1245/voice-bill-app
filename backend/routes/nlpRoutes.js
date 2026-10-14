@@ -3,7 +3,6 @@ import { Product, Customer } from '../models/index.js';
 
 const router = express.Router();
 
-// Helper to convert Hindi text numbers to integers
 const numberMap = {
   'ek': 1, 'one': 1, '1': 1,
   'do': 2, 'two': 2, '2': 2,
@@ -31,7 +30,6 @@ const parseNumber = (word) => {
   return isNaN(parsed) ? 1 : parsed;
 };
 
-// Parse Hindi/Hinglish units
 const unitMap = {
   'kilo': 'kg', 'kg': 'kg', 'kilos': 'kg',
   'packet': 'packet', 'packets': 'packet', 'pkt': 'packet',
@@ -40,7 +38,7 @@ const unitMap = {
   'gram': 'g', 'grams': 'g', 'g': 'g',
   'strip': 'strip', 'strips': 'strip',
   'litre': 'litre', 'litres': 'litre', 'l': 'litre',
-  'cheeni': 'kg', 'chawal': 'kg' // default guess
+  'cheeni': 'kg', 'chawal': 'kg'
 };
 
 const parseUnit = (word) => {
@@ -49,7 +47,6 @@ const parseUnit = (word) => {
   return unitMap[normalized] || normalized;
 };
 
-// NLP Parser Endpoint
 router.post('/parse', async (req, res) => {
   const { text, storeId } = req.body;
   if (!text) {
@@ -60,7 +57,58 @@ router.post('/parse', async (req, res) => {
   const products = await Product.find({ storeId });
   const customers = await Customer.find({ storeId });
 
-  // 1. Identify Sales Assistant Queries
+  // 1. Direct Voice Action Commands
+  if (queryText.includes('clear') || queryText.includes('khali karo') || queryText.includes('sab hata do')) {
+    return res.json({ intent: 'action', action: 'clear_cart', message: 'Cart cleared' });
+  }
+
+  if (queryText.includes('print karo') || queryText.includes('invoice print')) {
+    return res.json({ intent: 'action', action: 'print_bill', message: 'Print bill triggered' });
+  }
+
+  if (queryText.includes('whatsapp') && (queryText.includes('bhejo') || queryText.includes('share') || queryText.includes('send'))) {
+    return res.json({ intent: 'action', action: 'whatsapp_share', message: 'WhatsApp share triggered' });
+  }
+
+  if (
+    (queryText.includes('bill') || queryText.includes('order')) && 
+    (queryText.includes('confirm') || queryText.includes('generate') || queryText.includes('banao') || queryText.includes('done'))
+  ) {
+    return res.json({ intent: 'action', action: 'confirm_bill', message: 'Confirm bill triggered' });
+  }
+
+  // 2. Item Removal Commands
+  if (queryText.includes('hata do') || queryText.includes('remove') || queryText.includes('delete karo') || queryText.includes('cancel karo')) {
+    let target = queryText.replace(/hata do|remove|delete karo|cancel karo|se|ko|cart/g, '').trim();
+    const matched = products.find(p => p.name.toLowerCase().includes(target) || target.includes(p.name.toLowerCase()));
+    return res.json({
+      intent: 'remove_item',
+      productName: matched ? matched.name : target,
+      productId: matched ? matched._id : null,
+      message: `Item removal triggered for: ${matched ? matched.name : target}`
+    });
+  }
+
+  // 3. Quantity Update Commands
+  const updateMatch = queryText.match(/([a-z\s]+?)\s+(\d+|ek|do|teen|chaar|paanch|chhe|saat|aath|nau|das|bees)\s*(kilo|kg|packet|piece|bottle|gram|litre)?\s*(?:kar do|karo|change)/);
+  if (updateMatch && !queryText.includes('add') && !queryText.includes('dena')) {
+    const rawProd = updateMatch[1].trim();
+    const qty = parseNumber(updateMatch[2]);
+    const unit = parseUnit(updateMatch[3]);
+    const matched = products.find(p => p.name.toLowerCase().includes(rawProd) || rawProd.includes(p.name.toLowerCase()));
+    if (matched) {
+      return res.json({
+        intent: 'update_qty',
+        productId: matched._id,
+        productName: matched.name,
+        quantity: qty,
+        unit: unit || matched.unit,
+        message: `Updated quantity for ${matched.name} to ${qty}`
+      });
+    }
+  }
+
+  // 4. Identify Sales Assistant Queries
   if (
     queryText.includes('sale') || 
     queryText.includes('bik') || 
@@ -85,8 +133,7 @@ router.post('/parse', async (req, res) => {
     });
   }
 
-  // 2. Identify Payments & Balance Calculations
-  // E.g., "Customer ne 500 cash diya" or "500 cash diya"
+  // 5. Identify Payments & Balance Calculations
   const cashDiyaMatch = queryText.match(/(?:customer ne\s+)?(\d+|ek|do|teen|paanch|sau|hundred)\s*(?:rupaye|rs|rupya|rupees)?\s*(?:cash|diye|diya)/);
   if (cashDiyaMatch) {
     const cashReceived = parseNumber(cashDiyaMatch[1]);
@@ -98,13 +145,11 @@ router.post('/parse', async (req, res) => {
     });
   }
 
-  // 3. Identify Credit/Udhaar Commands
-  // E.g., "Ramesh ne 1000 rupaye udhaar liye" or "Shyam ka udhaar add karo 500"
+  // 6. Identify Credit/Udhaar Commands
   if (queryText.includes('udhaar') || queryText.includes('credit') || queryText.includes('khata')) {
     let customerName = null;
     let amount = null;
 
-    // Try finding customer name from the text
     for (const cust of customers) {
       if (queryText.includes(cust.name.toLowerCase()) || queryText.includes(cust.name.split(' ')[0].toLowerCase())) {
         customerName = cust.name;
@@ -112,7 +157,6 @@ router.post('/parse', async (req, res) => {
       }
     }
 
-    // Try extracting amount
     const amountMatch = queryText.match(/(\d+|ek|do|teen|paanch|sau|hundred)\s*(?:rupaye|rs|rupya|rupees)?/);
     if (amountMatch) {
       amount = parseNumber(amountMatch[1]);
@@ -128,8 +172,7 @@ router.post('/parse', async (req, res) => {
     }
   }
 
-  // 4. Identify Discounts
-  // E.g., "10 rupaye discount laga do" or "discount 50 rupees"
+  // 7. Identify Discounts
   const discountMatch = queryText.match(/(\d+|ek|do|teen|paanch|sau|hundred)\s*(?:rupaye|rs|rupya|rupees)?\s*(?:discount|off|kam)/);
   if (discountMatch) {
     const discount = parseNumber(discountMatch[1]);
@@ -140,25 +183,19 @@ router.post('/parse', async (req, res) => {
     });
   }
 
-  // 5. Add Product Voice Command
-  // E.g., "Naya product add karo, Tata Salt, price 25 rupees, stock 50 packets"
+  // 8. Add Product Voice Command
   if (queryText.includes('naya product') || queryText.includes('add product') || queryText.includes('new product')) {
-    // Try to extract product name, price, stock
-    // A simple parsing scheme: split by comma or spaces
     let productName = '';
     let price = 0;
     let stock = 0;
     let unit = 'packet';
 
-    // Parse product name (usually follows "add karo" or "product" or lies before price)
     const nameMatch = text.match(/(?:product|karo|naam|name)\s+([^,]+)(?:,\s*|price|daam|$)/i);
     if (nameMatch) productName = nameMatch[1].trim();
 
-    // Parse price
     const priceMatch = queryText.match(/(?:price|daam|rupees|₹|rs)\s*(\d+)/);
     if (priceMatch) price = parseInt(priceMatch[1]);
 
-    // Parse stock
     const stockMatch = queryText.match(/(?:stock|qty|quantity)\s*(\d+)\s*(packet|bottle|kg|piece|piece|pc|g)?/);
     if (stockMatch) {
       stock = parseInt(stockMatch[1]);
@@ -174,8 +211,7 @@ router.post('/parse', async (req, res) => {
     }
   }
 
-  // 6. Add Customer Voice Command
-  // E.g., "Naya customer add karo, naam Rahul" or "New customer Rahul phone 9876543210"
+  // 9. Add Customer Voice Command
   if (queryText.includes('customer') && (queryText.includes('naya') || queryText.includes('new') || queryText.includes('add'))) {
     const nameMatch = text.match(/(?:naam|name|customer)\s+([A-Za-z]+)/i);
     const mobileMatch = queryText.match(/(?:phone|mobile|number)?\s*([6-9]\d{9})/);
@@ -191,14 +227,11 @@ router.post('/parse', async (req, res) => {
     }
   }
 
-  // 7. Core Invoice Billing Parser (Extract products, quantities, units)
-  // Split query text by connectors: "aur", "and", "dena", ",", "plus", "do"
+  // 10. Core Invoice Billing Parser (Extract products, quantities, units)
   const sentences = queryText.split(/(?:aur|and|,|dena|\+)/);
   const items = [];
   const clarifications = [];
 
-  // Check if Customer Name is in the billing command
-  // E.g. "Ramesh ko..." or "Rahul ko..."
   let customerName = null;
   const customerPrefixMatch = queryText.match(/^([a-z]+)\s+ko/i);
   if (customerPrefixMatch) {
@@ -211,7 +244,6 @@ router.post('/parse', async (req, res) => {
     part = part.trim();
     if (!part) continue;
 
-    // Ignore customer prefixes in parts
     if (customerName && part.startsWith(customerName.toLowerCase())) {
       part = part.replace(customerName.toLowerCase(), '').trim();
     }
@@ -220,12 +252,6 @@ router.post('/parse', async (req, res) => {
       part = part.replace(/add karo|laga do/g, '').trim();
     }
 
-    // Match numbers and potential units
-    // Regex looking for quantity (number word or digit), optional unit, and product name
-    // E.g., "do kilo chawal" -> qty: do, unit: kilo, product: chawal
-    // E.g., "ek packet maggi" -> qty: ek, unit: packet, product: maggi
-    // E.g., "do coke" -> qty: do, unit: null, product: coke
-    // E.g., "5 biscuit" -> qty: 5, unit: null, product: biscuit
     const regex = /(\d+|ek|do|teen|chaar|paanch|chhe|saat|aath|nau|das|sau|one|two|three|four|five|six|seven|eight|nine|ten|sau)\s*(kilo|kg|packet|piece|piece|pc|pcs|bottle|bottles|gram|grams|g|strip|strips|litre|litres|l)?\s+([a-z0-9\s\-]+)/i;
     const match = part.match(regex);
 
@@ -238,7 +264,6 @@ router.post('/parse', async (req, res) => {
       unit = parseUnit(match[2]);
       productSearchTerm = match[3].trim();
     } else {
-      // Check if there is just a number and a product name without spaces or simple match
       const simpleNumberMatch = part.match(/^(\d+)\s+([a-z0-9\s\-]+)/i);
       if (simpleNumberMatch) {
         qty = parseInt(simpleNumberMatch[1]);
@@ -246,13 +271,10 @@ router.post('/parse', async (req, res) => {
       }
     }
 
-    // Skip empty terms or action verbs
     if (!productSearchTerm || ['batao', 'dikhaye', 'add', 'karo', 'dena'].includes(productSearchTerm)) {
       continue;
     }
 
-    // Match search term with inventory products
-    // Find all matching products in the store
     const matches = products.filter(p => {
       const pName = p.name.toLowerCase();
       return pName.includes(productSearchTerm) || 
@@ -261,7 +283,6 @@ router.post('/parse', async (req, res) => {
     });
 
     if (matches.length === 0) {
-      // Try phonetic or partial split
       const words = productSearchTerm.split(' ');
       const partialMatches = products.filter(p => {
         const pName = p.name.toLowerCase();
@@ -283,7 +304,6 @@ router.post('/parse', async (req, res) => {
         total: matchProd.price * qty
       });
     } else if (matches.length > 1) {
-      // AMBIGUITY! Multiple products match (e.g. Parle-G 50g and Parle-G 100g)
       clarifications.push({
         searchTerm: productSearchTerm,
         quantity: qty,
@@ -296,8 +316,6 @@ router.post('/parse', async (req, res) => {
         }))
       });
     } else {
-      // Product not found in stock. Do not invent a product price or quantity silently.
-      // Ask user to add it or clarify
       clarifications.push({
         searchTerm: productSearchTerm,
         quantity: qty,
@@ -308,7 +326,6 @@ router.post('/parse', async (req, res) => {
     }
   }
 
-  // Return parsed billing draft
   return res.json({
     intent: 'billing',
     customerName,
