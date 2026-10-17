@@ -13,7 +13,7 @@ import {
 import ThermalReceipt from '../../components/ThermalReceipt.jsx';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, LineChart, Line
+  PieChart, Pie, Cell, AreaChart, Area
 } from 'recharts';
 import { 
   Store, Package, ShoppingBag, DollarSign, Plus, Edit2, 
@@ -21,7 +21,8 @@ import {
   Mic, MicOff, Search, Users, Settings, Smartphone, Wifi, WifiOff,
   Sparkles, Send, ArrowRight, Printer, RefreshCw, X, AlertTriangle, 
   Share2, ArrowLeft, Check, UserPlus, CreditCard, Landmark, BookOpen,
-  Volume2, VolumeX, Monitor, LayoutGrid, Zap, HelpCircle, ArrowUpRight
+  Volume2, VolumeX, Monitor, LayoutGrid, Zap, HelpCircle, ArrowUpRight,
+  Palette, Sun, Moon, Flame, Shield, TrendingUp, Award, Layers
 } from 'lucide-react';
 
 export default function VendorDashboard() {
@@ -29,10 +30,13 @@ export default function VendorDashboard() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
-  // Mode View: 'mobile' (Phone Bezel Mockup) vs 'pos' (Full Desktop POS Counter)
+  // Color Theme: 'cyber' | 'saffron' | 'emerald' | 'light'
+  const [currentTheme, setCurrentTheme] = useState('cyber');
+
+  // Mode View: 'pos' (Widescreen Counter) vs 'mobile' (Phone Bezel)
   const [layoutMode, setLayoutMode] = useState('pos');
 
-  // Audio & Talkback settings
+  // Audio settings
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [talkbackEnabled, setTalkbackEnabled] = useState(true);
 
@@ -49,7 +53,7 @@ export default function VendorDashboard() {
   const [loading, setLoading] = useState(true);
   const [activeRole, setActiveRole] = useState(user?.role || 'Owner');
 
-  // Active Bottom Tab: 'home' | 'billing' | 'inventory' | 'ledger' | 'assistant' | 'settings'
+  // Active Bottom Tab: 'billing' | 'inventory' | 'ledger' | 'assistant' | 'settings'
   const [activeTab, setActiveTab] = useState('billing');
 
   // Unified voice billing states
@@ -63,10 +67,14 @@ export default function VendorDashboard() {
   const [cartItems, setCartItems] = useState([]);
   const [cartCustomer, setCartCustomer] = useState(null); // { name, mobile }
   const [cartDiscount, setCartDiscount] = useState(0);
-  const [cartTaxRate, setCartTaxRate] = useState(5); // default 5% GST
+  const [cartTaxRate, setCartTaxRate] = useState(5); // 5% GST
   const [paymentMethod, setPaymentMethod] = useState('Cash');
   const [cashReceived, setCashReceived] = useState('');
   const [changeToReturn, setChangeToReturn] = useState(0);
+
+  // POS Touch Bar Category filter
+  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [searchFilter, setSearchFilter] = useState('');
 
   // Ambiguity / Clarification state
   const [clarifications, setClarifications] = useState([]);
@@ -91,24 +99,23 @@ export default function VendorDashboard() {
   const [payUdhaarMode, setPayUdhaarMode] = useState('Cash');
   const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
   const [newCustomerForm, setNewCustomerForm] = useState({ name: '', mobile: '' });
+  const [showWhatsAppReminderModal, setShowWhatsAppReminderModal] = useState(false);
+  const [reminderTone, setReminderTone] = useState('polite'); // 'polite' | 'standard' | 'urgent'
 
   // Assistant chatbot states
   const [assistantMessages, setAssistantMessages] = useState([
-    { sender: 'assistant', text: 'Namaste! Main aapka VoiceBill AI assistant hoon. Aaj ki sales ya stock details ke baare mein kuch bhi poochiye.', type: 'text' }
+    { sender: 'assistant', text: 'Namaste! Main aapka VoiceBill AI Copilot hoon. Aaj ki sales, top products, ya low stock alert ke baare mein poocho.', type: 'text' }
   ]);
   const [assistantInput, setAssistantInput] = useState('');
   const [assistantChartData, setAssistantChartData] = useState(null);
+  const [chartType, setChartType] = useState('bar');
 
   // Web Speech Recognition ref
   const recognitionRef = useRef(null);
-  const audioContextRef = useRef(null);
-  const analyserRef = useRef(null);
-  const micStreamRef = useRef(null);
   const recordingTimerRef = useRef(null);
   const waveformRef = useRef(null);
   const canvasAnimationRef = useRef(null);
 
-  // Fetch initial profile & stores
   useEffect(() => {
     if (!user) {
       navigate('/login');
@@ -117,21 +124,19 @@ export default function VendorDashboard() {
     fetchStores();
   }, [user]);
 
-  // Handle active store changes
   useEffect(() => {
     if (selectedStore) {
       fetchStoreData(selectedStore._id);
     }
   }, [selectedStore, isOffline]);
 
-  // Sync offline queue when coming back online
   useEffect(() => {
     if (!isOffline && syncQueue.length > 0) {
       syncOfflineData();
     }
   }, [isOffline]);
 
-  // Initialize Web Speech Recognition
+  // Speech Recognition initialization
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SpeechRecognition) {
@@ -154,7 +159,7 @@ export default function VendorDashboard() {
       };
 
       recognition.onerror = (event) => {
-        console.warn('Speech recognition error:', event.error);
+        console.warn('Speech error:', event.error);
         setIsRecording(false);
       };
 
@@ -172,7 +177,6 @@ export default function VendorDashboard() {
     };
   }, [selectedStore]);
 
-  // Handle speech timer & waveform animation
   useEffect(() => {
     if (isRecording) {
       recordingTimerRef.current = setInterval(() => {
@@ -210,7 +214,7 @@ export default function VendorDashboard() {
           name: 'Apna Kirana Store',
           category: 'Kirana/Grocery',
           preferredLanguage: 'Hinglish',
-          address: 'Rohini, New Delhi',
+          address: 'Rohini Sector 4, New Delhi',
           upiId: 'apnakirana@okaxis',
           gstNumber: '07AAAAA1111A1Z1'
         };
@@ -265,7 +269,7 @@ export default function VendorDashboard() {
         localStorage.setItem(`bills_${storeId}`, JSON.stringify(billData));
       }
     } catch (err) {
-      console.error('Error fetching store data:', err);
+      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -286,7 +290,7 @@ export default function VendorDashboard() {
         });
         if (res.ok) successCount++;
       } catch (err) {
-        console.error('Sync failed for item:', action, err);
+        console.error(err);
       }
     }
     setSyncQueue([]);
@@ -295,10 +299,10 @@ export default function VendorDashboard() {
     }
     setLoading(false);
     if (soundEnabled) playSuccessChime();
-    alert(`Sync Complete! ${successCount} offline invoices and ledger modifications successfully synced.`);
+    alert(`Sync Complete! ${successCount} offline bills & ledger entries synced to cloud.`);
   };
 
-  // Canvas visualizer with dynamic wave
+  // Waveform canvas helper
   const startWaveformAnimation = () => {
     const canvas = waveformRef.current;
     if (!canvas) return;
@@ -308,15 +312,21 @@ export default function VendorDashboard() {
 
     const draw = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.strokeStyle = '#10b981';
+      
+      // Theme matching stroke
+      let strokeColor = '#8b5cf6';
+      if (currentTheme === 'saffron') strokeColor = '#f59e0b';
+      if (currentTheme === 'emerald') strokeColor = '#10b981';
+
+      ctx.strokeStyle = strokeColor;
       ctx.lineWidth = 3;
       ctx.beginPath();
       
-      const sliceWidth = canvas.width / 40;
+      const sliceWidth = canvas.width / 45;
       let x = 0;
 
-      for (let i = 0; i < 40; i++) {
-        const amplitude = Math.sin(i * 0.2 + Date.now() * 0.012) * Math.sin(Date.now() * 0.006) * 22 + 35;
+      for (let i = 0; i < 45; i++) {
+        const amplitude = Math.sin(i * 0.22 + Date.now() * 0.015) * Math.sin(Date.now() * 0.007) * 24 + 35;
         if (i === 0) ctx.moveTo(x, amplitude);
         else ctx.lineTo(x, amplitude);
         x += sliceWidth;
@@ -327,7 +337,6 @@ export default function VendorDashboard() {
     draw();
   };
 
-  // Trigger speech recognition or fallback simulation
   const toggleRecording = () => {
     if (soundEnabled) playClickSound();
 
@@ -342,28 +351,25 @@ export default function VendorDashboard() {
           recognitionRef.current.start();
           return;
         } catch (err) {
-          console.warn('Native speech recognition unavailable, falling back:', err);
+          console.warn('Native speech recognition fallback:', err);
         }
       }
-      // Browser fallback simulation if speech recognition not allowed
       setIsRecording(true);
       setTimeout(() => {
         setIsRecording(false);
-        const voicePresets = [
+        const presets = [
           "Ramesh ko do kilo chawal, ek kilo cheeni aur paanch biscuit dena",
           "Ek packet Maggi aur do Coke add karo",
           "Parle-G do packet add karo",
           "10 rupaye discount laga do",
-          "Customer ne 500 cash diya",
-          "Ramesh ne 500 rupaye udhaar liye"
+          "Customer ne 500 cash diya"
         ];
-        const randomPreset = voicePresets[Math.floor(Math.random() * voicePresets.length)];
-        triggerVoiceCommand(randomPreset);
-      }, 2500);
+        const picked = presets[Math.floor(Math.random() * presets.length)];
+        triggerVoiceCommand(picked);
+      }, 2400);
     }
   };
 
-  // Execute Voice Command
   const triggerVoiceCommand = async (text) => {
     setSpeechText(text);
     setIsProcessingAI(true);
@@ -374,7 +380,7 @@ export default function VendorDashboard() {
         const result = parseVoiceCommand(text, products, customers);
         handleNLPResult(result);
         setIsProcessingAI(false);
-      }, 400);
+      }, 350);
     } else {
       try {
         const res = await fetch('/api/nlp/parse', {
@@ -401,11 +407,9 @@ export default function VendorDashboard() {
     }
   };
 
-  // Process NLP Result
   const handleNLPResult = (result) => {
     if (!result) return;
 
-    // 1. Direct Action Commands
     if (result.intent === 'action') {
       if (result.action === 'clear_cart') {
         setCartItems([]);
@@ -425,7 +429,6 @@ export default function VendorDashboard() {
       return;
     }
 
-    // 2. Item Removal Command
     if (result.intent === 'remove_item') {
       if (result.productId) {
         removeCartItem(result.productId);
@@ -434,11 +437,10 @@ export default function VendorDashboard() {
         setCartItems(prev => prev.filter(i => !i.name.toLowerCase().includes(target)));
       }
       if (soundEnabled) playDeleteSound();
-      if (talkbackEnabled) speakVoice(`${result.productName} cart se hata diya gaya hai.`);
+      if (talkbackEnabled) speakVoice(`${result.productName} hata diya.`);
       return;
     }
 
-    // 3. Update Quantity Command
     if (result.intent === 'update_qty') {
       setCartItems(prev => prev.map(item => {
         if (item.productId === result.productId || item.name.toLowerCase().includes(result.productName.toLowerCase())) {
@@ -451,11 +453,10 @@ export default function VendorDashboard() {
         return item;
       }));
       if (soundEnabled) playScanBeep();
-      if (talkbackEnabled) speakVoice(`${result.productName} quantity ${result.quantity} kar di gayi hai.`);
+      if (talkbackEnabled) speakVoice(`${result.productName} quantity ${result.quantity} kar di gayi.`);
       return;
     }
 
-    // 4. Core Billing
     if (result.intent === 'billing') {
       if (result.customerName) {
         const match = customers.find(c => c.name.toLowerCase() === result.customerName.toLowerCase());
@@ -480,19 +481,18 @@ export default function VendorDashboard() {
         });
 
         if (talkbackEnabled) {
-          const itemNames = result.items.map(i => `${i.quantity} ${i.unit} ${i.name}`).join(' aur ');
-          speakVoice(`${itemNames} bill mein add ho gaya.`);
+          const names = result.items.map(i => `${i.quantity} ${i.unit} ${i.name}`).join(' aur ');
+          speakVoice(`${names} add ho gaya.`);
         }
       }
 
       if (result.clarifications && result.clarifications.length > 0) {
         setClarifications(result.clarifications);
         setShowClarificationModal(true);
-        if (talkbackEnabled) speakVoice('Kripya product size select karein.');
+        if (talkbackEnabled) speakVoice('Kripya size select karein.');
       }
     }
 
-    // 5. Payments
     else if (result.intent === 'payment') {
       setPaymentMethod(result.paymentMethod || 'Cash');
       if (result.cashReceived) {
@@ -500,30 +500,27 @@ export default function VendorDashboard() {
         calculateChange(result.cashReceived);
         if (talkbackEnabled) {
           const change = Math.max(0, result.cashReceived - cartTotal);
-          speakVoice(`Cash mila ₹${result.cashReceived}. Wapas karne hain ₹${change}.`);
+          speakVoice(`Cash mila ₹${result.cashReceived}. Wapas karein ₹${change}.`);
         }
       }
     }
 
-    // 6. Discounts
     else if (result.intent === 'discount') {
       setCartDiscount(result.discount);
       if (soundEnabled) playScanBeep();
-      if (talkbackEnabled) speakVoice(`₹${result.discount} ka discount lagaya gaya.`);
+      if (talkbackEnabled) speakVoice(`₹${result.discount} discount lagaya.`);
     }
 
-    // 7. Credit/Udhaar
     else if (result.intent === 'credit') {
       setPaymentMethod('Credit/Udhaar');
       const match = customers.find(c => c.name.toLowerCase().includes(result.customerName.toLowerCase()));
       if (match) setCartCustomer(match);
       else setCartCustomer({ name: result.customerName, mobile: '' });
 
-      if (talkbackEnabled) speakVoice(`${result.customerName} ke khate mein ₹${result.amount} ka udhaar note kiya gaya.`);
-      alert(`Parsed Udhaar: ₹${result.amount} credit allocation for ${result.customerName}`);
+      if (talkbackEnabled) speakVoice(`${result.customerName} ke khate mein ₹${result.amount} udhaar likha gaya.`);
+      alert(`Parsed Udhaar: ₹${result.amount} credit for ${result.customerName}`);
     }
 
-    // 8. Add Product
     else if (result.intent === 'add_product') {
       setProductForm({
         name: result.product.name,
@@ -537,7 +534,6 @@ export default function VendorDashboard() {
       setShowProductModal(true);
     }
 
-    // 9. Add Customer
     else if (result.intent === 'add_customer') {
       setNewCustomerForm({
         name: result.customer.name,
@@ -546,13 +542,11 @@ export default function VendorDashboard() {
       setShowAddCustomerModal(true);
     }
 
-    // 10. Sales Query
     else if (result.intent === 'sales_query') {
       handleAssistantQuery(result.salesIntent);
     }
   };
 
-  // Ambiguity Resolution handler
   const selectAmbiguousProduct = (option, quantity, index) => {
     if (soundEnabled) playScanBeep();
     setCartItems(prev => {
@@ -598,7 +592,6 @@ export default function VendorDashboard() {
     }
   };
 
-  // Totals calculations
   const cartSubtotal = cartItems.reduce((acc, item) => acc + item.total, 0);
   const cartTax = parseFloat(((cartSubtotal - cartDiscount) * (cartTaxRate / 100)).toFixed(2));
   const cartTotal = Math.max(0, cartSubtotal - cartDiscount + cartTax);
@@ -628,7 +621,6 @@ export default function VendorDashboard() {
     setCartItems(prev => prev.filter(item => item.productId !== productId));
   };
 
-  // Quick product addition from touch bar
   const handleQuickAddProduct = (p) => {
     if (soundEnabled) playScanBeep();
     setCartItems(prev => {
@@ -652,7 +644,6 @@ export default function VendorDashboard() {
     if (talkbackEnabled) speakVoice(`${p.name} add kiya.`);
   };
 
-  // Confirm Order / Print Bill
   const handleConfirmBill = async () => {
     if (cartItems.length === 0) return;
 
@@ -752,7 +743,7 @@ export default function VendorDashboard() {
           setCashReceived('');
           setChangeToReturn(0);
         } else {
-          alert(data.message || 'Error processing invoice');
+          alert(data.message || 'Error creating bill');
         }
       } catch (err) {
         console.error(err);
@@ -762,7 +753,6 @@ export default function VendorDashboard() {
     }
   };
 
-  // Inventory Save
   const handleProductSubmit = async (e) => {
     e.preventDefault();
     if (isOffline) {
@@ -850,7 +840,6 @@ export default function VendorDashboard() {
     }
   };
 
-  // Barcode search simulation
   const handleBarcodeScanSubmit = (e) => {
     e.preventDefault();
     if (!barcodeSearch) return;
@@ -870,11 +859,10 @@ export default function VendorDashboard() {
       setShowBarcodeModal(false);
       setActiveTab('billing');
     } else {
-      alert(`No product matches barcode/search "${barcodeSearch}" in inventory.`);
+      alert(`No product matches barcode "${barcodeSearch}".`);
     }
   };
 
-  // Customer ledger actions
   const handleAddCustomerSubmit = async (e) => {
     e.preventDefault();
     if (!newCustomerForm.name) return;
@@ -968,7 +956,7 @@ export default function VendorDashboard() {
       setPayUdhaarAmount('');
       setShowPayUdhaarModal(false);
       if (soundEnabled) playSuccessChime();
-      if (talkbackEnabled) speakVoice(`₹${payVal} ka payment record kiya gaya.`);
+      if (talkbackEnabled) speakVoice(`₹${payVal} payment jama ho gaya.`);
     } else {
       try {
         setLoading(true);
@@ -990,7 +978,7 @@ export default function VendorDashboard() {
             return fresh || prev;
           });
           if (soundEnabled) playSuccessChime();
-          if (talkbackEnabled) speakVoice(`Payment recorded successfully.`);
+          if (talkbackEnabled) speakVoice('Payment successfully recorded.');
         }
       } catch (err) {
         console.error(err);
@@ -1000,52 +988,54 @@ export default function VendorDashboard() {
     }
   };
 
-  // Assistant Logic
   const handleAssistantQuery = (intent) => {
     let responseText = '';
     let chartData = null;
 
     if (intent === 'today_sales') {
       const todayTotal = bills.reduce((acc, b) => acc + b.totalAmount, 0);
-      responseText = `Aaj ki total sale ₹${todayTotal} hui hai (${bills.length} orders).`;
+      responseText = `Aaj ki total sale ₹${todayTotal} hui hai (${bills.length} orders total).`;
       chartData = bills.map((b) => ({
         name: b.invoiceNumber,
         Amount: b.totalAmount
       }));
+      setChartType('bar');
     } else if (intent === 'top_products') {
-      responseText = `Is hafte Basmati Rice aur Maggi Noodles sabse zyada bike hain.`;
+      responseText = `Is hafte Basmati Rice aur Maggi sabse zyada bike hain!`;
       chartData = [
         { name: 'Basmati Rice', Sales: 450 },
         { name: 'Maggi Noodles', Sales: 280 },
         { name: 'Coca Cola', Sales: 160 },
         { name: 'Tata Salt', Sales: 120 }
       ];
+      setChartType('bar');
     } else if (intent === 'low_stock') {
       const lowStockList = products.filter(p => p.stock <= p.lowStockAlertLimit);
       if (lowStockList.length > 0) {
-        responseText = `In products ka stock kam hai: ${lowStockList.map(p => `${p.name} (${p.stock} bache)`).join(', ')}.`;
+        responseText = `⚠️ In products ka stock kam hai: ${lowStockList.map(p => `${p.name} (${p.stock} units)`).join(', ')}.`;
         chartData = lowStockList.map(p => ({
           name: p.name,
           Quantity: p.stock,
           Limit: p.lowStockAlertLimit
         }));
       } else {
-        responseText = `Aapke sabhi products ka stock level safe hai!`;
+        responseText = `Aapke sabhi products ka stock safe zone mein hai!`;
       }
+      setChartType('bar');
     } else if (intent === 'compare_sales') {
-      responseText = `Kal ki sale ke mukable aaj sale 24% zyada rahi hai.`;
+      responseText = `Kal ki sale ke mukable aaj sale 24% zyada rahi hai! 🚀`;
       chartData = [
         { name: 'Kal (Yesterday)', Sales: 1800 },
         { name: 'Aaj (Today)', Sales: 2232 }
       ];
+      setChartType('bar');
     } else if (intent === 'profit') {
-      responseText = `Aapka computed gross profit margin 18.5% hai (~₹1,480).`;
+      responseText = `Aapka computed gross profit margin ~18.5% hai (₹1,480 net profit estimate).`;
       chartData = [
-        { name: 'Product Cost', Amount: 3200 },
-        { name: 'Gross Profit', Amount: 1480 }
+        { name: 'Cost of Goods', Amount: 3200 },
+        { name: 'Estimated Profit', Amount: 1480 }
       ];
-    } else {
-      responseText = `Aap simple terms mein pooch sakte hain, jaise "Aaj ki sale" ya "Stock alert".`;
+      setChartType('bar');
     }
 
     setAssistantMessages(prev => [
@@ -1075,6 +1065,33 @@ export default function VendorDashboard() {
     handleAssistantQuery(intent);
   };
 
+  const filteredProducts = products.filter(p => {
+    const matchesCategory = selectedCategory === 'All' || p.category?.toLowerCase() === selectedCategory.toLowerCase();
+    const matchesSearch = !searchFilter || p.name.toLowerCase().includes(searchFilter.toLowerCase());
+    return matchesCategory && matchesSearch;
+  });
+
+  const categories = ['All', 'Grains', 'Packaged Foods', 'Beverages', 'Condiments', 'Personal Care'];
+
+  // WhatsApp reminder message builder
+  const buildWhatsAppReminderUrl = (customer) => {
+    let msg = '';
+    if (reminderTone === 'polite') {
+      msg = `🙏 *सादर प्रणाम ${customer.name} ji*\n` +
+            `Yeh *${selectedStore?.name}* ki taraf se vinamra sandesh hai.\n` +
+            `Aapka pichhla baki udhaar: *₹${customer.pendingCredit}* hai.\n` +
+            (selectedStore?.upiId ? `Kripya suvidha anusar UPI dwara bhugtan karein:\n📲 *${selectedStore.upiId}*\n\n` : '') +
+            `Dhanyawad! Apka din shubh ho! 💐`;
+    } else if (reminderTone === 'urgent') {
+      msg = `⚠️ *Zaroori Suchna - ${selectedStore?.name}*\n` +
+            `Shri *${customer.name}*, aapka baki udhaar *₹${customer.pendingCredit}* kripya aaj hi clear karne ka kasht karein.\n` +
+            `UPI: *${selectedStore?.upiId}*\nDhanyawad.`;
+    } else {
+      msg = `Namaste ${customer.name} ji, *${selectedStore?.name}* se aapka ₹${customer.pendingCredit} ka udhaar balance pending hai. Kripya UPI (${selectedStore?.upiId}) dwara payment karein. Dhanyawad!`;
+    }
+    return `https://wa.me/91${customer.mobile}?text=${encodeURIComponent(msg)}`;
+  };
+
   const voicePresets = [
     { label: '🛒 "Ramesh ko 2 kilo chawal aur 5 biscuit dena"', text: 'Ramesh ko do kilo chawal, ek kilo cheeni aur paanch biscuit dena' },
     { label: '🍜 "1 packet Maggi aur 2 Coke add karo"', text: 'Ek packet Maggi aur do Coke add karo' },
@@ -1086,34 +1103,51 @@ export default function VendorDashboard() {
     { label: '📊 "Aaj ki sale kitni hui?"', text: 'Aaj ki sale kitni hui?' }
   ];
 
+  // Theme styling helpers
+  const getThemeBg = () => {
+    if (currentTheme === 'saffron') return 'bg-[#0b0c16]';
+    if (currentTheme === 'emerald') return 'bg-[#050e0a]';
+    if (currentTheme === 'light') return 'bg-slate-100 text-slate-900';
+    return 'bg-[#070a12]'; // cyber default
+  };
+
+  const getAccentGrad = () => {
+    if (currentTheme === 'saffron') return 'from-amber-500 via-orange-500 to-rose-500';
+    if (currentTheme === 'emerald') return 'from-emerald-500 via-teal-500 to-cyan-500';
+    if (currentTheme === 'light') return 'from-indigo-600 via-blue-600 to-cyan-500';
+    return 'from-violet-600 via-purple-500 to-cyan-400';
+  };
+
   return (
-    <div className="min-h-screen bg-[#070b14] text-slate-100 flex flex-col font-sans select-none">
+    <div className={`min-h-screen ${getThemeBg()} flex flex-col font-sans select-none transition-colors duration-300 theme-${currentTheme}`}>
       
-      {/* GLOBAL TOP NAVIGATION & CONTROL BAR */}
-      <header className="bg-[#0b1120] border-b border-white/10 px-4 sm:px-6 py-2.5 flex items-center justify-between sticky top-0 z-30 backdrop-blur-md">
+      {/* ========================================================================= */}
+      {/* ULTRA-MODERN HEADER BAR                                                   */}
+      {/* ========================================================================= */}
+      <header className="bg-slate-900/80 border-b border-white/10 px-4 sm:px-6 py-3 flex items-center justify-between sticky top-0 z-30 backdrop-blur-xl">
         
         {/* Brand & Store Selector */}
         <div className="flex items-center gap-3">
-          <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-400 text-slate-950 flex items-center justify-center font-black shadow-lg shadow-emerald-500/20">
+          <div className={`h-10 w-10 rounded-2xl bg-gradient-to-tr ${getAccentGrad()} text-white flex items-center justify-center font-black shadow-lg shadow-purple-500/20`}>
             <Mic className="h-5 w-5" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-extrabold text-white text-sm sm:text-base tracking-tight">VoiceBill AI</span>
-              <span className="hidden sm:inline-flex px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                PRO POS
+              <span className="font-black text-white text-base tracking-tight">VoiceBill AI</span>
+              <span className="hidden sm:inline-flex px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-gradient-to-r from-violet-500/20 to-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                PRO 2.5
               </span>
             </div>
             {/* Store dropdown */}
-            <div className="flex items-center gap-1 text-[11px] text-slate-400">
-              <Store className="h-3 w-3 text-emerald-400" />
+            <div className="flex items-center gap-1.5 text-xs text-slate-400">
+              <Store className="h-3 w-3 text-cyan-400" />
               <select
                 value={selectedStore ? selectedStore._id : ''}
                 onChange={(e) => {
                   const match = stores.find(s => s._id === e.target.value);
                   if (match) setSelectedStore(match);
                 }}
-                className="bg-transparent font-semibold text-slate-200 outline-none cursor-pointer max-w-[130px] sm:max-w-[180px] truncate"
+                className="bg-transparent font-bold text-slate-200 outline-none cursor-pointer max-w-[140px] sm:max-w-[190px] truncate"
               >
                 {stores.map(store => (
                   <option key={store._id} value={store._id} className="bg-slate-900 text-white">{store.name}</option>
@@ -1123,47 +1157,82 @@ export default function VendorDashboard() {
           </div>
         </div>
 
-        {/* Center: Live Stats Quick Ticker (Desktop) */}
-        <div className="hidden lg:flex items-center gap-6 px-4 py-1 rounded-2xl bg-slate-900/80 border border-white/5 text-xs">
-          <div>
-            <span className="text-[10px] text-slate-400 uppercase font-bold block">Today's Sales</span>
-            <span className="font-black text-white text-sm">₹{bills.reduce((acc, b) => acc + b.totalAmount, 0)}</span>
+        {/* Center: Live Stats Ticker (Desktop) */}
+        <div className="hidden lg:flex items-center gap-6 px-5 py-1.5 rounded-2xl bg-white/5 border border-white/10 text-xs backdrop-blur-md">
+          <div className="flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+            <div>
+              <span className="text-[10px] text-slate-400 uppercase font-bold block">Today's Sales</span>
+              <span className="font-black text-white text-sm">₹{bills.reduce((acc, b) => acc + b.totalAmount, 0)}</span>
+            </div>
           </div>
-          <div className="h-6 w-px bg-white/10" />
+          <div className="h-7 w-px bg-white/10" />
           <div>
             <span className="text-[10px] text-slate-400 uppercase font-bold block">Udhaar Khata</span>
-            <span className="font-black text-red-400 text-sm">₹{customers.reduce((acc, c) => acc + (c.pendingCredit || 0), 0)}</span>
+            <span className="font-black text-rose-400 text-sm">₹{customers.reduce((acc, c) => acc + (c.pendingCredit || 0), 0)}</span>
           </div>
-          <div className="h-6 w-px bg-white/10" />
+          <div className="h-7 w-px bg-white/10" />
           <div>
-            <span className="text-[10px] text-slate-400 uppercase font-bold block">Bills</span>
-            <span className="font-black text-emerald-400 text-sm">{bills.length}</span>
+            <span className="text-[10px] text-slate-400 uppercase font-bold block">Invoices</span>
+            <span className="font-black text-cyan-400 text-sm">{bills.length}</span>
           </div>
         </div>
 
         {/* Right Tools Controls */}
         <div className="flex items-center gap-2 sm:gap-3">
           
-          {/* Sound & Talkback toggles */}
+          {/* Creative Theme Picker */}
+          <div className="flex items-center bg-white/5 border border-white/10 rounded-2xl p-1 gap-1">
+            <button
+              onClick={() => setCurrentTheme('cyber')}
+              title="Cyber Neon Violet & Cyan"
+              className={`h-6 w-6 rounded-xl flex items-center justify-center transition-all ${currentTheme === 'cyber' ? 'bg-violet-600 text-white shadow-lg shadow-violet-500/50 scale-105' : 'text-slate-400 hover:text-white'}`}
+            >
+              🌌
+            </button>
+            <button
+              onClick={() => setCurrentTheme('saffron')}
+              title="Kirana Gold & Saffron"
+              className={`h-6 w-6 rounded-xl flex items-center justify-center transition-all ${currentTheme === 'saffron' ? 'bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/50 scale-105' : 'text-slate-400 hover:text-white'}`}
+            >
+              🌅
+            </button>
+            <button
+              onClick={() => setCurrentTheme('emerald')}
+              title="Mint Jade Oasis"
+              className={`h-6 w-6 rounded-xl flex items-center justify-center transition-all ${currentTheme === 'emerald' ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/50 scale-105' : 'text-slate-400 hover:text-white'}`}
+            >
+              🌿
+            </button>
+            <button
+              onClick={() => setCurrentTheme('light')}
+              title="Crisp Daylight Mode"
+              className={`h-6 w-6 rounded-xl flex items-center justify-center transition-all ${currentTheme === 'light' ? 'bg-white text-slate-900 shadow-lg scale-105' : 'text-slate-400 hover:text-white'}`}
+            >
+              ☀️
+            </button>
+          </div>
+
+          {/* Sound & Talkback */}
           <button
             onClick={() => {
               setTalkbackEnabled(!talkbackEnabled);
-              if (!talkbackEnabled) speakVoice('Voice feedback enabled.');
+              if (!talkbackEnabled) speakVoice('Voice talkback active.');
             }}
-            title={talkbackEnabled ? 'Voice talkback enabled' : 'Voice talkback muted'}
-            className={`p-2 rounded-xl border text-xs flex items-center gap-1 transition-all ${
+            title={talkbackEnabled ? 'Voice talkback active' : 'Voice talkback muted'}
+            className={`p-2 rounded-2xl border text-xs flex items-center gap-1 transition-all ${
               talkbackEnabled
-                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                ? 'bg-purple-500/15 text-purple-300 border-purple-500/30'
                 : 'bg-white/5 text-slate-500 border-white/5'
             }`}
           >
-            {talkbackEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+            {talkbackEnabled ? <Volume2 className="h-4 w-4 text-purple-400" /> : <VolumeX className="h-4 w-4" />}
           </button>
 
           {/* Offline / Online toggle */}
           <button
             onClick={() => setIsOffline(!isOffline)}
-            className={`px-2.5 py-1.5 rounded-xl border text-[11px] font-bold flex items-center gap-1.5 transition-all ${
+            className={`px-3 py-1.5 rounded-2xl border text-xs font-bold flex items-center gap-1.5 transition-all ${
               isOffline
                 ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
                 : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
@@ -1173,30 +1242,30 @@ export default function VendorDashboard() {
             <span className="hidden sm:inline">{isOffline ? 'Offline' : 'Online'}</span>
           </button>
 
-          {/* Layout Mode Switch (Mobile Frame vs Widescreen POS) */}
-          <div className="hidden md:flex items-center bg-slate-900 border border-white/10 rounded-xl p-0.5">
+          {/* Layout Mode Switch (Mobile Phone vs POS Widescreen) */}
+          <div className="hidden md:flex items-center bg-white/5 border border-white/10 rounded-2xl p-1">
             <button
               onClick={() => setLayoutMode('pos')}
-              className={`px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1 transition-all ${
-                layoutMode === 'pos' ? 'bg-emerald-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'
+              className={`px-3 py-1 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
+                layoutMode === 'pos' ? 'bg-gradient-to-r from-violet-600 to-cyan-500 text-white shadow' : 'text-slate-400 hover:text-white'
               }`}
             >
-              <Monitor className="h-3.5 w-3.5" /> POS Counter
+              <Monitor className="h-3.5 w-3.5" /> Counter POS
             </button>
             <button
               onClick={() => setLayoutMode('mobile')}
-              className={`px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1 transition-all ${
-                layoutMode === 'mobile' ? 'bg-emerald-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'
+              className={`px-3 py-1 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
+                layoutMode === 'mobile' ? 'bg-gradient-to-r from-violet-600 to-cyan-500 text-white shadow' : 'text-slate-400 hover:text-white'
               }`}
             >
-              <Smartphone className="h-3.5 w-3.5" /> Mobile View
+              <Smartphone className="h-3.5 w-3.5" /> Phone View
             </button>
           </div>
 
-          {/* User profile / Logout */}
+          {/* Logout */}
           <button
             onClick={() => dispatch(logout())}
-            className="text-xs bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 px-2.5 py-1.5 rounded-xl font-semibold"
+            className="text-xs bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/25 px-3 py-1.5 rounded-2xl font-bold"
           >
             Logout
           </button>
@@ -1204,77 +1273,85 @@ export default function VendorDashboard() {
         </div>
       </header>
 
-      {/* MAIN CONTENT WORKSPACE */}
+      {/* ========================================================================= */}
+      {/* MAIN VIEWPORT (WIDESCREEN COUNTER vs PHONE PREVIEW)                      */}
+      {/* ========================================================================= */}
       <div className="flex-1 flex overflow-hidden">
         
-        {/* ========================================================================= */}
-        {/* 1. WIDESCREEN POS COUNTER MODE (TABLET / DESKTOP SPLIT VIEW)            */}
-        {/* ========================================================================= */}
         {layoutMode === 'pos' ? (
+          /* ===================================================================== */
+          /* 1. COUNTER POS WIDESCREEN WORKSPACE                                    */
+          /* ===================================================================== */
           <div className="flex-1 flex flex-col lg:flex-row overflow-hidden p-3 sm:p-5 gap-4">
             
-            {/* LEFT COLUMN: VOICE INTERACTION & QUICK TOUCH ITEMS */}
+            {/* LEFT COLUMN: GLOWING AI ORB, LIVE SPEECH, & PRODUCT CATALOG */}
             <div className="w-full lg:w-5/12 flex flex-col gap-4 overflow-y-auto">
               
-              {/* Voice Listening Card */}
-              <div className="bg-gradient-to-b from-slate-900/90 to-slate-950 border border-white/10 rounded-3xl p-5 shadow-2xl relative overflow-hidden">
-                <div className="flex justify-between items-center mb-3">
+              {/* Ethereal AI Voice Terminal Card */}
+              <div className="bg-slate-900/80 border border-white/10 rounded-[32px] p-5 shadow-2xl relative overflow-hidden backdrop-blur-2xl">
+                
+                {/* Glowing Aura Rings */}
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-gradient-to-tr from-violet-600/20 to-cyan-400/20 rounded-full blur-2xl pointer-events-none" />
+
+                <div className="flex justify-between items-center mb-3 relative z-10">
                   <div className="flex items-center gap-2">
-                    <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-ping" />
-                    <span className="text-xs font-extrabold uppercase tracking-wider text-emerald-400">
-                      Smart Voice Terminal
+                    <Sparkles className="h-4 w-4 text-purple-400" />
+                    <span className="text-xs font-black uppercase tracking-wider text-slate-200">
+                      Voice Commander
                     </span>
                   </div>
-                  <span className="text-[10px] text-slate-400 font-mono">
-                    {isRecording ? `REC 0:0${recordingTime}` : 'READY TO LISTEN'}
+                  <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold ${
+                    isRecording ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' : 'bg-white/5 text-slate-400'
+                  }`}>
+                    {isRecording ? `RECORDING 0:0${recordingTime}` : 'STANDBY'}
                   </span>
                 </div>
 
-                {/* Big Center Microphone Button */}
-                <div className="flex flex-col items-center justify-center my-3">
-                  <div className="relative inline-flex items-center justify-center p-3">
+                {/* Glowing AI Voice Orb */}
+                <div className="flex flex-col items-center justify-center my-3 relative z-10">
+                  <div className="relative inline-flex items-center justify-center p-4">
+                    {/* Pulsing halo */}
                     {isRecording && (
-                      <>
-                        <div className="absolute inset-0 bg-emerald-500/20 rounded-full animate-ping" />
-                        <div className="absolute inset-2 bg-emerald-500/30 rounded-full animate-pulse" />
-                      </>
+                      <div className="absolute inset-0 rounded-full bg-gradient-to-r from-violet-500/30 via-cyan-500/30 to-emerald-500/30 blur-xl animate-pulse" />
                     )}
                     <button
                       onClick={toggleRecording}
-                      className={`relative z-10 h-20 w-20 rounded-full flex items-center justify-center text-white shadow-2xl transition-all active:scale-90 ${
+                      className={`relative z-10 h-24 w-24 rounded-full flex items-center justify-center text-white shadow-2xl transition-all active:scale-95 group ${
                         isRecording 
-                          ? 'bg-red-500 shadow-red-500/40 hover:bg-red-600 scale-105' 
-                          : 'bg-emerald-500 shadow-emerald-500/30 hover:bg-emerald-400 hover:scale-105'
+                          ? 'bg-gradient-to-tr from-rose-600 to-orange-500 shadow-rose-500/40 animate-pulse' 
+                          : 'bg-gradient-to-tr from-violet-600 via-purple-600 to-cyan-500 shadow-purple-500/30 hover:shadow-cyan-500/40 hover:scale-105'
                       }`}
                     >
                       {isRecording ? (
-                        <MicOff className="h-9 w-9 animate-pulse" />
+                        <MicOff className="h-10 w-10 animate-bounce" />
                       ) : (
-                        <Mic className="h-9 w-9" />
+                        <div className="flex flex-col items-center">
+                          <Mic className="h-10 w-10 group-hover:scale-110 transition-transform" />
+                        </div>
                       )}
                     </button>
                   </div>
 
-                  <span className="text-xs font-bold text-slate-200 mt-2">
-                    {isRecording ? 'Listening... Speak now' : 'Click to Speak (or pick preset)'}
+                  <span className="text-xs font-extrabold text-white mt-1">
+                    {isRecording ? 'Listening to speech...' : 'Tap Orb to Speak'}
                   </span>
-                  <span className="text-[11px] text-slate-500 mt-0.5">
-                    Hindi • Hinglish • English
+                  <span className="text-[11px] text-slate-400 mt-0.5">
+                    "Ramesh ko 2 kilo chawal dena"
                   </span>
                 </div>
 
                 {/* Live Audio Waveform Canvas */}
                 {isRecording && (
-                  <div className="my-2 bg-slate-950/60 rounded-2xl p-2 border border-white/5">
-                    <canvas ref={waveformRef} className="w-full h-12" />
+                  <div className="my-2 bg-slate-950/70 rounded-2xl p-2 border border-white/5 relative z-10">
+                    <canvas ref={waveformRef} className="w-full h-11" />
                   </div>
                 )}
 
-                {/* Live Speech Recognition text preview */}
+                {/* Live Transcript / Speech bubble */}
                 {(liveTranscript || speechText) && (
-                  <div className="bg-slate-950/90 border border-emerald-500/20 rounded-2xl p-3 mt-3">
-                    <span className="text-[9px] font-bold text-emerald-400 uppercase tracking-widest block mb-0.5">
-                      Transcription
+                  <div className="bg-slate-950/90 border border-purple-500/25 rounded-2xl p-3.5 mt-2 relative z-10">
+                    <span className="text-[9px] font-bold text-cyan-400 uppercase tracking-widest block mb-1">
+                      Live Transcription
                     </span>
                     <p className="text-xs text-slate-200 font-medium italic">
                       "{liveTranscript || speechText}"
@@ -1282,62 +1359,98 @@ export default function VendorDashboard() {
                   </div>
                 )}
 
-                {/* AI Processing Banner */}
                 {isProcessingAI && (
-                  <div className="flex items-center gap-2 justify-center text-xs text-emerald-400 font-bold mt-2 animate-pulse">
+                  <div className="flex items-center gap-2 justify-center text-xs text-cyan-300 font-bold mt-2 animate-pulse relative z-10">
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    <span>Analyzing natural language items...</span>
+                    <span>Parsing products, quantities & units...</span>
                   </div>
                 )}
               </div>
 
-              {/* Quick Touch Bar (Top Selling Indian Kirana Items) */}
-              <div className="bg-slate-900/80 border border-white/10 rounded-3xl p-4 space-y-3">
+              {/* Kirana Catalog with Category Tabs */}
+              <div className="bg-slate-900/80 border border-white/10 rounded-[32px] p-5 space-y-3.5 backdrop-blur-xl">
                 <div className="flex justify-between items-center">
-                  <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5 uppercase tracking-wider">
-                    <Zap className="h-4 w-4 text-amber-400" /> Fast Touch POS
+                  <span className="text-xs font-black text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+                    <LayoutGrid className="h-4 w-4 text-amber-400" /> Fast Touch Shelf
                   </span>
                   <button
                     onClick={() => setShowBarcodeModal(true)}
-                    className="text-[10px] text-emerald-400 hover:underline flex items-center gap-1 font-semibold"
+                    className="text-[10px] text-cyan-400 hover:underline flex items-center gap-1 font-bold bg-cyan-500/10 border border-cyan-500/20 px-2 py-0.5 rounded-lg"
                   >
-                    <Smartphone className="h-3 w-3" /> Scan Barcode
+                    <Smartphone className="h-3 w-3" /> Barcode Scanner
                   </button>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {products.slice(0, 8).map(p => (
+                {/* Category Filter Pills */}
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
+                  {categories.map(cat => (
+                    <button
+                      key={cat}
+                      onClick={() => setSelectedCategory(cat)}
+                      className={`px-3 py-1 rounded-xl font-bold whitespace-nowrap transition-all text-[11px] ${
+                        selectedCategory === cat
+                          ? 'bg-gradient-to-r from-violet-600 to-cyan-500 text-white shadow-md'
+                          : 'bg-white/5 text-slate-400 hover:text-white hover:bg-white/10'
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Product Search Input */}
+                <div className="relative">
+                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                  <input
+                    type="text"
+                    value={searchFilter}
+                    onChange={(e) => setSearchFilter(e.target.value)}
+                    placeholder="Search Basmati, Maggi, Parle..."
+                    className="w-full pl-9 pr-4 py-2 rounded-xl text-xs glass-input text-white"
+                  />
+                </div>
+
+                {/* Product Touch Grid */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-[220px] overflow-y-auto pr-1">
+                  {filteredProducts.map(p => (
                     <button
                       key={p._id}
                       onClick={() => handleQuickAddProduct(p)}
-                      className="p-2.5 rounded-2xl bg-slate-950 border border-white/5 hover:border-emerald-500/30 hover:bg-slate-850 text-left transition-all active:scale-95 group flex flex-col justify-between"
+                      className="p-3 rounded-2xl bg-slate-950/70 border border-white/5 hover:border-purple-500/30 hover:bg-slate-850 text-left transition-all active:scale-95 group flex flex-col justify-between"
                     >
-                      <span className="text-xs font-bold text-slate-200 truncate group-hover:text-emerald-400">
-                        {p.name.split(' ')[0]} {p.name.split(' ')[1] || ''}
-                      </span>
-                      <div className="flex justify-between items-center mt-2 text-[10px]">
-                        <span className="text-emerald-400 font-extrabold">₹{p.price}</span>
-                        <span className="text-slate-500">{p.unit}</span>
+                      <div>
+                        <span className="text-xs font-bold text-slate-200 block truncate group-hover:text-purple-300">
+                          {p.name}
+                        </span>
+                        <span className="text-[10px] text-slate-500">{p.unit}</span>
+                      </div>
+                      <div className="flex justify-between items-center mt-2.5">
+                        <span className="text-emerald-400 font-black text-xs">₹{p.price}</span>
+                        <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold ${
+                          p.stock <= p.lowStockAlertLimit ? 'bg-rose-500/10 text-rose-400' : 'bg-white/5 text-slate-400'
+                        }`}>
+                          {p.stock}
+                        </span>
                       </div>
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* Voice Simulator Presets Drawer */}
-              <div className="bg-slate-900/60 border border-white/10 rounded-3xl p-4 flex-1 space-y-2">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
-                  Quick Voice Presets (Testing)
+              {/* Quick Testing Voice Preset Chips */}
+              <div className="bg-slate-900/60 border border-white/10 rounded-[32px] p-4 space-y-2">
+                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest block">
+                  Testing Presets (One-Click)
                 </span>
-                <div className="grid grid-cols-1 gap-1.5 max-h-[220px] overflow-y-auto pr-1">
+                <div className="grid grid-cols-1 gap-1.5 max-h-[190px] overflow-y-auto pr-1">
                   {voicePresets.map((preset, idx) => (
                     <button
                       key={idx}
                       onClick={() => triggerVoiceCommand(preset.text)}
-                      className="p-2.5 rounded-xl bg-slate-950 hover:bg-emerald-500/10 text-left text-xs text-slate-300 font-medium border border-white/5 hover:border-emerald-500/20 transition-all flex items-center justify-between group"
+                      className="p-2.5 rounded-xl bg-slate-950/80 hover:bg-violet-500/10 text-left text-xs text-slate-300 font-medium border border-white/5 hover:border-violet-500/30 transition-all flex items-center justify-between group"
                     >
                       <span className="truncate pr-2">{preset.label}</span>
-                      <ArrowRight className="h-3.5 w-3.5 text-slate-600 group-hover:text-emerald-400 shrink-0" />
+                      <ArrowRight className="h-3.5 w-3.5 text-slate-600 group-hover:text-cyan-400 shrink-0" />
                     </button>
                   ))}
                 </div>
@@ -1345,18 +1458,24 @@ export default function VendorDashboard() {
 
             </div>
 
-            {/* CENTER/RIGHT COLUMN: LIVE BILL CART & CHECKOUT LEDGER */}
+            {/* CENTER/RIGHT COLUMN: LIVE BILL TAPE & REAL-TIME CHECKOUT LEDGER */}
             <div className="w-full lg:w-7/12 flex flex-col gap-4 overflow-y-auto">
               
-              {/* Cart Items Table */}
-              <div className="bg-slate-900/90 border border-white/10 rounded-3xl p-5 shadow-2xl flex-1 flex flex-col">
+              {/* POS Cart Container */}
+              <div className="bg-slate-900/80 border border-white/10 rounded-[32px] p-5 shadow-2xl flex-1 flex flex-col backdrop-blur-xl">
+                
+                {/* Cart Top Ribbon */}
                 <div className="flex justify-between items-center pb-3 border-b border-white/10">
                   <div className="flex items-center gap-2">
-                    <ShoppingCart className="h-5 w-5 text-emerald-400" />
-                    <h3 className="font-bold text-base text-white">Current Bill Counter</h3>
-                    <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-white/5 text-slate-300">
-                      {cartItems.length} items
-                    </span>
+                    <div className="h-8 w-8 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 flex items-center justify-center">
+                      <ShoppingCart className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <h3 className="font-black text-white text-base">Active Register Tape</h3>
+                      <span className="text-[10px] text-slate-400">
+                        {cartItems.length} items listed
+                      </span>
+                    </div>
                   </div>
 
                   {cartItems.length > 0 && (
@@ -1366,39 +1485,40 @@ export default function VendorDashboard() {
                         setCartCustomer(null);
                         if (soundEnabled) playDeleteSound();
                       }}
-                      className="text-xs text-red-400 hover:text-red-300 font-bold"
+                      className="text-xs text-rose-400 hover:text-rose-300 font-bold bg-rose-500/10 border border-rose-500/20 px-3 py-1 rounded-xl"
                     >
                       Clear Bill
                     </button>
                   )}
                 </div>
 
-                {/* Customer Info row */}
+                {/* Customer Pill if identified */}
                 {cartCustomer && (
-                  <div className="bg-emerald-500/10 border border-emerald-500/20 px-3.5 py-2.5 rounded-2xl flex justify-between items-center text-xs my-3">
-                    <span className="text-slate-300 font-semibold">
-                      Customer: <strong className="text-white">{cartCustomer.name}</strong>
-                    </span>
+                  <div className="bg-gradient-to-r from-violet-500/10 via-cyan-500/10 to-emerald-500/10 border border-purple-500/20 px-3.5 py-2 rounded-2xl flex justify-between items-center text-xs my-2.5">
+                    <div className="flex items-center gap-2">
+                      <Users className="h-3.5 w-3.5 text-purple-400" />
+                      <span className="text-slate-300">Customer: <strong className="text-white font-bold">{cartCustomer.name}</strong></span>
+                    </div>
                     {cartCustomer.mobile && (
                       <span className="text-slate-400 font-mono text-[11px]">{cartCustomer.mobile}</span>
                     )}
                   </div>
                 )}
 
-                {/* Cart Items List */}
-                <div className="flex-1 overflow-y-auto my-3 space-y-2 min-h-[180px]">
+                {/* Cart Table Items */}
+                <div className="flex-1 overflow-y-auto my-3 space-y-2 min-h-[170px]">
                   {cartItems.length === 0 ? (
-                    <div className="h-44 flex flex-col items-center justify-center text-slate-500 text-xs italic gap-2">
+                    <div className="h-40 flex flex-col items-center justify-center text-slate-500 text-xs italic gap-2">
                       <ShoppingBag className="h-8 w-8 text-slate-700" />
-                      <span>No items added. Speak or tap products to build customer bill.</span>
+                      <span>Empty bill tape. Tap the microphone or touch products to add.</span>
                     </div>
                   ) : (
                     cartItems.map((item, idx) => (
                       <div
                         key={idx}
-                        className="bg-slate-950 p-3 rounded-2xl border border-white/5 flex items-center justify-between text-xs hover:border-white/10 transition-colors"
+                        className="bg-slate-950/70 p-3 rounded-2xl border border-white/5 flex items-center justify-between text-xs hover:border-purple-500/25 transition-all"
                       >
-                        <div className="flex-1">
+                        <div className="flex-1 pr-2">
                           <span className="font-bold text-white block">{item.name}</span>
                           <span className="text-[10px] text-slate-400">₹{item.price} per {item.unit}</span>
                         </div>
@@ -1423,13 +1543,13 @@ export default function VendorDashboard() {
                             </button>
                           </div>
 
-                          <span className="font-black text-white text-sm min-w-[60px] text-right">
+                          <span className="font-black text-white text-sm min-w-[55px] text-right">
                             ₹{item.total}
                           </span>
 
                           <button
                             onClick={() => removeCartItem(item.productId)}
-                            className="p-1.5 text-slate-500 hover:text-red-400 rounded-lg hover:bg-white/5"
+                            className="p-1.5 text-slate-500 hover:text-rose-400 rounded-lg hover:bg-white/5"
                           >
                             <Trash2 className="h-4 w-4" />
                           </button>
@@ -1439,21 +1559,44 @@ export default function VendorDashboard() {
                   )}
                 </div>
 
-                {/* Financial Summary & Calculations */}
-                <div className="bg-slate-950/80 border border-white/10 p-4 rounded-3xl space-y-2.5">
+                {/* Savings Pill */}
+                {cartDiscount > 0 && (
+                  <div className="bg-amber-500/10 border border-amber-500/25 py-1.5 px-3 rounded-xl text-xs font-bold text-amber-300 flex items-center gap-2 mb-2">
+                    <Award className="h-4 w-4 text-amber-400" />
+                    <span>Customer Savings: <strong>₹{cartDiscount} off applied!</strong></span>
+                  </div>
+                )}
+
+                {/* Financial Summary */}
+                <div className="bg-slate-950/80 border border-white/10 p-4 rounded-3xl space-y-2">
                   <div className="flex justify-between text-xs text-slate-400">
                     <span>Subtotal</span>
                     <span className="text-slate-200 font-bold">₹{cartSubtotal}</span>
                   </div>
 
+                  {/* Fast Discount Buttons */}
                   <div className="flex justify-between items-center text-xs text-slate-400">
-                    <span>Discount (₹)</span>
-                    <input
-                      type="number"
-                      value={cartDiscount}
-                      onChange={(e) => setCartDiscount(Math.max(0, parseFloat(e.target.value) || 0))}
-                      className="bg-slate-900 border border-white/10 rounded-lg w-20 py-1 px-2 text-right font-bold text-white text-xs"
-                    />
+                    <span>Discount</span>
+                    <div className="flex items-center gap-1.5">
+                      {[10, 20, 50].map(amt => (
+                        <button
+                          key={amt}
+                          type="button"
+                          onClick={() => setCartDiscount(amt)}
+                          className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border transition-all ${
+                            cartDiscount === amt ? 'bg-amber-500 text-slate-950 border-amber-400' : 'bg-white/5 border-white/10 text-slate-400'
+                          }`}
+                        >
+                          ₹{amt}
+                        </button>
+                      ))}
+                      <input
+                        type="number"
+                        value={cartDiscount}
+                        onChange={(e) => setCartDiscount(Math.max(0, parseFloat(e.target.value) || 0))}
+                        className="bg-slate-900 border border-white/10 rounded-lg w-16 py-0.5 px-1.5 text-right font-bold text-white text-xs"
+                      />
+                    </div>
                   </div>
 
                   <div className="flex justify-between items-center text-xs text-slate-400">
@@ -1461,33 +1604,35 @@ export default function VendorDashboard() {
                     <select
                       value={cartTaxRate}
                       onChange={(e) => setCartTaxRate(parseInt(e.target.value))}
-                      className="bg-slate-900 border border-white/10 rounded-lg py-1 px-2 font-bold text-white text-xs"
+                      className="bg-slate-900 border border-white/10 rounded-lg py-0.5 px-2 font-bold text-white text-xs"
                     >
-                      <option value={0}>0%</option>
-                      <option value={5}>5% (Kirana)</option>
-                      <option value={12}>12%</option>
-                      <option value={18}>18%</option>
+                      <option value={0}>0% GST</option>
+                      <option value={5}>5% GST (Grocery)</option>
+                      <option value={12}>12% GST</option>
+                      <option value={18}>18% GST</option>
                     </select>
                   </div>
 
                   <div className="flex justify-between text-xs text-slate-400">
-                    <span>GST Tax ({cartTaxRate}%)</span>
+                    <span>GST Tax</span>
                     <span className="text-slate-200 font-bold">₹{cartTax}</span>
                   </div>
 
-                  <div className="border-t border-white/10 pt-2 flex justify-between items-center">
-                    <span className="text-sm font-bold text-white">Grand Total</span>
-                    <span className="text-xl font-black text-emerald-400">₹{cartTotal}</span>
+                  <div className="border-t border-white/10 pt-2.5 flex justify-between items-center">
+                    <span className="text-base font-black text-white">Grand Total</span>
+                    <span className="text-2xl font-black bg-gradient-to-r from-emerald-400 to-cyan-300 bg-clip-text text-transparent">
+                      ₹{cartTotal}
+                    </span>
                   </div>
                 </div>
 
-                {/* Payment Mode Selector & Cash Change Calculator */}
+                {/* Payment Selector & Cash Quick Presets */}
                 <div className="mt-3 bg-slate-950/80 border border-white/10 p-4 rounded-3xl space-y-3">
                   <div className="flex justify-between items-center">
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                       Payment Mode
                     </span>
-                    <span className="text-xs font-bold text-emerald-400">{paymentMethod}</span>
+                    <span className="text-xs font-bold text-cyan-400">{paymentMethod}</span>
                   </div>
 
                   <div className="grid grid-cols-4 gap-2">
@@ -1495,9 +1640,9 @@ export default function VendorDashboard() {
                       <button
                         key={m}
                         onClick={() => setPaymentMethod(m)}
-                        className={`py-2 px-2 rounded-xl text-xs font-bold text-center border transition-all ${
+                        className={`py-2 px-1 rounded-2xl text-xs font-bold text-center border transition-all ${
                           paymentMethod === m
-                            ? 'bg-emerald-500 border-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
+                            ? 'bg-gradient-to-r from-violet-600 to-cyan-500 border-transparent text-white shadow-lg'
                             : 'bg-slate-900 border-white/5 hover:bg-slate-850 text-slate-400'
                         }`}
                       >
@@ -1507,43 +1652,63 @@ export default function VendorDashboard() {
                   </div>
 
                   {paymentMethod === 'Cash' && (
-                    <div className="grid grid-cols-2 gap-3 bg-slate-900 p-3 rounded-2xl border border-white/5 text-xs">
-                      <div>
-                        <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
-                          Cash Received
-                        </label>
-                        <input
-                          type="number"
-                          value={cashReceived}
-                          onChange={(e) => {
-                            setCashReceived(e.target.value);
-                            calculateChange(e.target.value);
-                          }}
-                          placeholder="₹ Given by customer"
-                          className="bg-slate-950 border border-white/10 rounded-xl w-full py-1.5 px-3 font-bold text-white text-xs"
-                        />
+                    <div className="space-y-2 bg-slate-900/90 p-3 rounded-2xl border border-white/5">
+                      {/* Cash fast denomination pills */}
+                      <div className="flex items-center gap-1.5 overflow-x-auto text-[10px]">
+                        <span className="text-slate-500 font-bold">Fast Cash:</span>
+                        {[cartTotal, 100, 200, 500, 2000].filter(n => n >= cartTotal).slice(0, 4).map((cashVal, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => {
+                              setCashReceived(cashVal.toString());
+                              calculateChange(cashVal.toString());
+                            }}
+                            className="px-2 py-0.5 rounded-lg bg-white/5 border border-white/10 font-bold hover:bg-white/10 text-slate-300"
+                          >
+                            ₹{cashVal}
+                          </button>
+                        ))}
                       </div>
-                      <div>
-                        <span className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
-                          Change To Return
-                        </span>
-                        <span className="block text-base font-black text-amber-400 py-1">
-                          ₹{changeToReturn}
-                        </span>
+
+                      <div className="grid grid-cols-2 gap-3 pt-1 text-xs">
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
+                            Cash Received
+                          </label>
+                          <input
+                            type="number"
+                            value={cashReceived}
+                            onChange={(e) => {
+                              setCashReceived(e.target.value);
+                              calculateChange(e.target.value);
+                            }}
+                            placeholder="₹ Given by customer"
+                            className="bg-slate-950 border border-white/10 rounded-xl w-full py-1.5 px-3 font-bold text-white text-xs"
+                          />
+                        </div>
+                        <div>
+                          <span className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
+                            Change to Return
+                          </span>
+                          <span className="block text-base font-black text-amber-400 py-1">
+                            ₹{changeToReturn}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   )}
                 </div>
 
-                {/* Generate Bill Button */}
+                {/* Instant Print / Bill Confirm Button */}
                 <button
                   type="button"
                   disabled={cartItems.length === 0}
                   onClick={handleConfirmBill}
-                  className="mt-3 w-full py-4 rounded-2xl font-black text-slate-950 bg-emerald-500 hover:bg-emerald-400 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-xl shadow-emerald-500/20 disabled:opacity-40 disabled:pointer-events-none text-sm tracking-wide"
+                  className="mt-3 w-full py-4 rounded-2xl font-black text-slate-950 bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-2xl shadow-emerald-500/25 disabled:opacity-40 disabled:pointer-events-none text-sm tracking-wide"
                 >
                   <CheckCircle2 className="h-5 w-5" />
-                  <span>Generate & Print Invoice Slip (₹{cartTotal})</span>
+                  <span>Generate & Print Bill Slip (₹{cartTotal})</span>
                 </button>
 
               </div>
@@ -1552,11 +1717,11 @@ export default function VendorDashboard() {
 
           </div>
         ) : (
-          /* ========================================================================= */
-          /* 2. MOBILE PHONE VIEW (APP SHELL SIMULATOR)                              */
-          /* ========================================================================= */
+          /* ===================================================================== */
+          /* 2. MOBILE PHONE SIMULATOR SHELL                                       */
+          /* ===================================================================== */
           <div className="flex-1 bg-slate-950 flex justify-center items-center py-4 px-2 sm:px-4">
-            <div className="w-full max-w-[420px] bg-slate-900 border border-white/10 rounded-[44px] shadow-2xl overflow-hidden aspect-[9/19] flex flex-col max-h-[850px] relative">
+            <div className="w-full max-w-[420px] bg-slate-900 border border-white/10 rounded-[44px] shadow-2xl overflow-hidden aspect-[9/19] flex flex-col max-h-[850px] relative backdrop-blur-2xl">
               
               {/* Phone Status Bar */}
               <div className="px-6 py-3 bg-slate-900 border-b border-white/5 flex justify-between items-center text-xs text-slate-400 font-semibold select-none z-20">
@@ -1568,26 +1733,26 @@ export default function VendorDashboard() {
                 </div>
               </div>
 
-              {/* Active Tab Screen inside phone shell */}
+              {/* Mobile Viewport Area */}
               <div className="flex-1 overflow-y-auto px-4 py-5 bg-slate-950/60 relative space-y-4">
                 
-                {/* Voice Record Box in Mobile View */}
-                <div className="bg-slate-900 border border-white/5 rounded-3xl p-4 text-center space-y-3">
+                {/* Voice Orb in Mobile View */}
+                <div className="bg-slate-900 border border-white/10 rounded-3xl p-5 text-center space-y-3 relative overflow-hidden">
                   <div className="relative inline-flex items-center justify-center p-2">
                     {isRecording && (
-                      <div className="absolute inset-0 bg-emerald-500/20 rounded-full animate-ping" />
+                      <div className="absolute inset-0 bg-purple-500/20 rounded-full animate-ping" />
                     )}
                     <button
                       onClick={toggleRecording}
-                      className={`h-16 w-16 rounded-full flex items-center justify-center text-white shadow-xl transition-all ${
-                        isRecording ? 'bg-red-500' : 'bg-emerald-500'
+                      className={`h-18 w-18 rounded-full flex items-center justify-center text-white shadow-xl transition-all ${
+                        isRecording ? 'bg-rose-500' : 'bg-gradient-to-r from-violet-600 to-cyan-500'
                       }`}
                     >
                       {isRecording ? <MicOff className="h-8 w-8 animate-pulse" /> : <Mic className="h-8 w-8" />}
                     </button>
                   </div>
                   <span className="block text-xs font-bold text-white">
-                    {isRecording ? 'Listening...' : 'Tap Mic to Bill'}
+                    {isRecording ? 'Listening...' : 'Tap Orb to Voice Bill'}
                   </span>
                   {(liveTranscript || speechText) && (
                     <p className="text-[11px] text-slate-300 italic bg-slate-950 p-2 rounded-xl">
@@ -1599,8 +1764,8 @@ export default function VendorDashboard() {
                 {/* Mobile Cart Items */}
                 <div className="space-y-2">
                   <div className="flex justify-between items-center text-xs font-bold text-slate-400">
-                    <span>Bill Items ({cartItems.length})</span>
-                    <span>Total: ₹{cartTotal}</span>
+                    <span>Current Bill ({cartItems.length})</span>
+                    <span className="text-emerald-400 font-black">₹{cartTotal}</span>
                   </div>
                   {cartItems.map((item, idx) => (
                     <div key={idx} className="bg-slate-900 p-2.5 rounded-xl border border-white/5 flex justify-between items-center text-xs">
@@ -1610,7 +1775,7 @@ export default function VendorDashboard() {
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-white">₹{item.total}</span>
-                        <button onClick={() => removeCartItem(item.productId)} className="text-red-400">
+                        <button onClick={() => removeCartItem(item.productId)} className="text-rose-400">
                           <X className="h-3.5 w-3.5" />
                         </button>
                       </div>
@@ -1619,7 +1784,7 @@ export default function VendorDashboard() {
                   {cartItems.length > 0 && (
                     <button
                       onClick={handleConfirmBill}
-                      className="w-full py-3 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs"
+                      className="w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-400 to-cyan-400 text-slate-950 font-black text-xs"
                     >
                       Confirm Bill (₹{cartTotal})
                     </button>
@@ -1628,11 +1793,11 @@ export default function VendorDashboard() {
 
               </div>
 
-              {/* Bottom Mobile Navigation Bar */}
+              {/* Bottom Phone Bar */}
               <div className="px-6 py-2.5 bg-slate-900 border-t border-white/5 flex justify-between items-center text-[10px] text-slate-400 select-none z-10">
-                <button onClick={() => setLayoutMode('pos')} className="flex flex-col items-center gap-1 text-emerald-400 font-bold">
+                <button onClick={() => setLayoutMode('pos')} className="flex flex-col items-center gap-1 text-cyan-400 font-bold">
                   <Monitor className="h-4 w-4" />
-                  <span>POS Counter</span>
+                  <span>POS Desktop</span>
                 </button>
                 <button onClick={() => setShowBarcodeModal(true)} className="flex flex-col items-center gap-1">
                   <Smartphone className="h-4 w-4" />
@@ -1650,13 +1815,17 @@ export default function VendorDashboard() {
 
       </div>
 
+      {/* ========================================================================= */}
+      {/* SECONDARY SCREENS / DRAWERS: INVENTORY, KHATA LEDGER, AI ASSISTANT        */}
+      {/* ========================================================================= */}
+
       {/* AMBIGUITY CLARIFICATION MODAL */}
       {showClarificationModal && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 animate-fade-in select-none">
-          <div className="w-full max-w-[420px] bg-slate-900 border border-white/10 rounded-3xl p-6 space-y-4 shadow-2xl">
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 animate-fade-in select-none backdrop-blur-md">
+          <div className="w-full max-w-md bg-slate-900 border border-white/10 rounded-3xl p-6 space-y-4 shadow-2xl">
             <div className="flex justify-between items-center">
               <span className="text-sm font-bold text-white flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5 text-amber-500" /> Which variant did you mean?
+                <AlertTriangle className="h-5 w-5 text-amber-400" /> Multiple Sizes Found
               </span>
               <button onClick={() => setShowClarificationModal(false)} className="text-slate-400 hover:text-white">
                 <X className="h-5 w-5" />
@@ -1664,7 +1833,7 @@ export default function VendorDashboard() {
             </div>
 
             <p className="text-xs text-slate-400">
-              Multiple products or sizes matched your speech. Tap the exact item you want:
+              Aapke bolne par multiple sizes mile hain. Kripya sahi item chunien:
             </p>
 
             <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
@@ -1676,12 +1845,12 @@ export default function VendorDashboard() {
 
                   {item.notFound ? (
                     <div className="space-y-2">
-                      <p className="text-[10px] text-slate-500">Not found in stock. Add to inventory?</p>
+                      <p className="text-[10px] text-slate-500">Inventory mein nahi mila. Naya product register karein?</p>
                       <button
                         onClick={() => addNewProductFromAmbiguity(item.searchTerm, item.quantity, idx)}
                         className="w-full py-2 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs"
                       >
-                        + Register "{item.searchTerm}" in Stock
+                        + Add "{item.searchTerm}" to Stock
                       </button>
                     </div>
                   ) : (
@@ -1690,7 +1859,7 @@ export default function VendorDashboard() {
                         <button
                           key={option.productId}
                           onClick={() => selectAmbiguousProduct(option, item.quantity, idx)}
-                          className="flex justify-between items-center p-2.5 rounded-xl bg-slate-900 hover:bg-emerald-500/10 border border-white/5 hover:border-emerald-500/30 text-xs font-semibold text-slate-200 transition-all"
+                          className="flex justify-between items-center p-3 rounded-xl bg-slate-900 hover:bg-purple-500/10 border border-white/5 hover:border-purple-500/30 text-xs font-semibold text-slate-200 transition-all"
                         >
                           <span>{option.name}</span>
                           <span className="text-emerald-400 font-bold">₹{option.price}</span>
@@ -1705,22 +1874,17 @@ export default function VendorDashboard() {
         </div>
       )}
 
-      {/* GENERATED INVOICE MODAL (THERMAL RECEIPT + TAX INVOICE + UPI QR CODE) */}
-      {generatedInvoice && (
-        <ThermalReceipt
-          invoice={generatedInvoice}
-          store={selectedStore}
-          onClose={() => setGeneratedInvoice(null)}
-        />
-      )}
-
       {/* BARCODE SCANNER MODAL */}
       {showBarcodeModal && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 animate-fade-in select-none">
-          <form onSubmit={handleBarcodeScanSubmit} className="w-full max-w-[380px] bg-slate-900 border border-white/10 rounded-3xl p-6 space-y-4">
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 animate-fade-in select-none backdrop-blur-md">
+          <form onSubmit={handleBarcodeScanSubmit} className="w-full max-w-sm bg-slate-900 border border-white/10 rounded-3xl p-6 space-y-4 relative overflow-hidden">
+            
+            {/* Animated Red Laser Scan Line */}
+            <div className="absolute left-6 right-6 h-0.5 bg-rose-500 shadow-[0_0_15px_#f43f5e] animate-laser pointer-events-none" />
+
             <div className="flex justify-between items-center border-b border-white/10 pb-2">
               <span className="text-sm font-bold text-white flex items-center gap-2">
-                <Smartphone className="h-5 w-5 text-emerald-400" /> Barcode Reader Scanner
+                <Smartphone className="h-5 w-5 text-cyan-400" /> Barcode Reader Scanner
               </span>
               <button type="button" onClick={() => setShowBarcodeModal(false)} className="text-slate-400 hover:text-white">
                 <X className="h-5 w-5" />
@@ -1728,45 +1892,45 @@ export default function VendorDashboard() {
             </div>
 
             <p className="text-xs text-slate-400">
-              Enter product barcode code or search term to simulate physical laser scanning:
+              Scan barcode or enter code to add product instantly:
             </p>
 
             <input
               type="text"
               value={barcodeSearch}
               onChange={(e) => setBarcodeSearch(e.target.value)}
-              placeholder="e.g. 111, 222, 333, 444"
+              placeholder="111, 222, 333, 444"
               required
               autoFocus
-              className="w-full px-4 py-3 rounded-xl text-white bg-slate-950 border border-white/10 font-mono font-bold tracking-widest text-center text-base"
+              className="w-full px-4 py-3 rounded-2xl text-white bg-slate-950 border border-white/10 font-mono font-black tracking-widest text-center text-lg focus:border-cyan-400"
             />
 
-            <div className="text-[11px] text-slate-400 bg-slate-950 p-3 rounded-xl border border-white/5 space-y-1">
-              <span className="font-bold text-emerald-400 block">💡 Quick Test Barcodes:</span>
+            <div className="text-[11px] text-slate-400 bg-slate-950 p-3 rounded-2xl border border-white/5 space-y-1">
+              <span className="font-bold text-cyan-400 block">💡 Test Codes:</span>
               <div className="grid grid-cols-2 gap-1 text-[10px]">
-                <span className="cursor-pointer hover:underline" onClick={() => setBarcodeSearch('111')}>• "111" - Basmati Rice</span>
-                <span className="cursor-pointer hover:underline" onClick={() => setBarcodeSearch('222')}>• "222" - Maggi Noodles</span>
-                <span className="cursor-pointer hover:underline" onClick={() => setBarcodeSearch('333')}>• "333" - Coca Cola</span>
-                <span className="cursor-pointer hover:underline" onClick={() => setBarcodeSearch('444')}>• "444" - Parle-G Biscuit</span>
+                <span className="cursor-pointer hover:underline" onClick={() => setBarcodeSearch('111')}>• "111" - Rice</span>
+                <span className="cursor-pointer hover:underline" onClick={() => setBarcodeSearch('222')}>• "222" - Maggi</span>
+                <span className="cursor-pointer hover:underline" onClick={() => setBarcodeSearch('333')}>• "333" - Coke</span>
+                <span className="cursor-pointer hover:underline" onClick={() => setBarcodeSearch('444')}>• "444" - Parle-G</span>
               </div>
             </div>
 
             <div className="pt-2">
-              <button type="submit" className="w-full py-3 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs">
-                Scan & Add to Bill
+              <button type="submit" className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-violet-600 to-cyan-500 text-white font-black text-xs uppercase tracking-wider">
+                Scan Code
               </button>
             </div>
           </form>
         </div>
       )}
 
-      {/* ADD INVENTORY PRODUCT MODAL */}
+      {/* ADD/EDIT INVENTORY PRODUCT MODAL */}
       {showProductModal && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 animate-fade-in select-none">
-          <form onSubmit={handleProductSubmit} className="w-full max-w-[420px] bg-slate-900 border border-white/10 rounded-3xl p-6 space-y-4">
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 animate-fade-in select-none backdrop-blur-md">
+          <form onSubmit={handleProductSubmit} className="w-full max-w-md bg-slate-900 border border-white/10 rounded-3xl p-6 space-y-4">
             <div className="flex justify-between items-center border-b border-white/10 pb-3">
               <span className="text-sm font-bold text-white">
-                {editingProduct ? 'Edit Catalog Product' : 'Add New Inventory Product'}
+                {editingProduct ? 'Edit Product' : 'Add New Inventory Item'}
               </span>
               <button type="button" onClick={() => setShowProductModal(false)} className="text-slate-400 hover:text-white">
                 <X className="h-5 w-5" />
@@ -1842,12 +2006,21 @@ export default function VendorDashboard() {
             </div>
 
             <div className="pt-2 flex gap-2">
-              <button type="submit" className="flex-1 py-3 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs">
-                Save to Inventory
+              <button type="submit" className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-violet-600 to-cyan-500 text-white font-black text-xs uppercase tracking-wider">
+                Save Product
               </button>
             </div>
           </form>
         </div>
+      )}
+
+      {/* GENERATED INVOICE REVIEW MODAL (THERMAL RECEIPT + GST TAX INVOICE + UPI QR CODE) */}
+      {generatedInvoice && (
+        <ThermalReceipt
+          invoice={generatedInvoice}
+          store={selectedStore}
+          onClose={() => setGeneratedInvoice(null)}
+        />
       )}
 
     </div>

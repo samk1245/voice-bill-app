@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
-import { loginSuccess, loginFailure, loginStart } from '../../store/authSlice.js';
-import { MessageSquare, Phone, ShieldCheck, Sparkles, Store, Check, ArrowRight } from 'lucide-react';
+import { loginSuccess, loginStart } from '../../store/authSlice.js';
+import { 
+  Sparkles, Store, ArrowRight, Check, Phone, ShieldCheck, 
+  Mic, Zap, Globe, Lock, UserCheck, AlertCircle 
+} from 'lucide-react';
 
 export default function Login() {
   const [mobile, setMobile] = useState('');
@@ -11,13 +14,13 @@ export default function Login() {
   const [sentOtp, setSentOtp] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [selectedLanguage, setSelectedLanguage] = useState('Hinglish');
 
-  // Shop Setup fields (shown for new users)
+  // Shop Setup fields (for new users)
   const [shopName, setShopName] = useState('');
   const [category, setCategory] = useState('Kirana/Grocery');
   const [address, setAddress] = useState('');
   const [gstNumber, setGstNumber] = useState('');
-  const [preferredLanguage, setPreferredLanguage] = useState('Hinglish');
   const [upiId, setUpiId] = useState('');
 
   const navigate = useNavigate();
@@ -68,15 +71,12 @@ export default function Login() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Verification failed');
 
-      // If it's a new user, proceed to Shop Setup screen
       if (data.isNewUser) {
-        // Temporarily store the auth token in memory so we can submit the store profile
         dispatch(loginStart());
         localStorage.setItem('tempToken', data.token);
         localStorage.setItem('tempUser', JSON.stringify(data.user));
         setStep('setup');
       } else {
-        // Existing user, log in directly
         dispatch(loginSuccess({ token: data.token, user: data.user }));
         navigate('/vendor/dashboard');
       }
@@ -100,7 +100,6 @@ export default function Login() {
     const user = JSON.parse(localStorage.getItem('tempUser'));
 
     try {
-      // 1. Create the store
       const storeRes = await fetch('/api/stores/add', {
         method: 'POST',
         headers: {
@@ -112,17 +111,14 @@ export default function Login() {
           category,
           address,
           gstNumber,
-          preferredLanguage,
-          upiId
+          preferredLanguage: selectedLanguage,
+          upiId: upiId || `${shopName.toLowerCase().replace(/\s+/g, '')}@upi`
         })
       });
       const storeData = await storeRes.json();
       if (!storeRes.ok) throw new Error(storeData.message || 'Failed to setup shop');
 
-      // 2. Dispatch successful login state
       dispatch(loginSuccess({ token, user }));
-      
-      // Clean up temporary items
       localStorage.removeItem('tempToken');
       localStorage.removeItem('tempUser');
 
@@ -134,102 +130,142 @@ export default function Login() {
     }
   };
 
-  const fillDemoNumber = (number) => {
-    setMobile(number);
+  const fillDemoAccount = (demoPhone, roleLabel) => {
+    setMobile(demoPhone);
     setError('');
+    // Auto simulate sending OTP
+    setSentOtp('123456');
+    setStep('otp');
+    setOtp('123456');
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4 relative overflow-hidden">
-      {/* Decorative Orbs */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-80 h-80 rounded-full bg-emerald-500/10 blur-[100px] pointer-events-none" />
-      <div className="absolute bottom-1/4 left-1/4 w-80 h-80 rounded-full bg-blue-500/10 blur-[100px] pointer-events-none" />
+    <div className="min-h-screen bg-[#070a12] text-slate-100 flex flex-col items-center justify-center p-4 relative overflow-hidden selection:bg-purple-500 selection:text-white">
+      
+      {/* Dynamic Animated Glowing Backdrops */}
+      <div className="absolute top-1/4 -left-20 w-96 h-96 rounded-full bg-violet-600/15 blur-[120px] pointer-events-none animate-pulse" />
+      <div className="absolute bottom-1/4 -right-20 w-96 h-96 rounded-full bg-cyan-500/15 blur-[120px] pointer-events-none animate-pulse" style={{ animationDelay: '1.5s' }} />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full bg-emerald-500/5 blur-[140px] pointer-events-none" />
 
-      {/* Main Mobile Frame wrapper for desktop, standard fit on mobile */}
-      <div className="w-full max-w-[420px] bg-slate-900 border border-white/10 rounded-[32px] overflow-hidden shadow-2xl flex flex-col aspect-[9/19] max-h-[850px] relative z-10">
+      {/* Language Switcher Ribbon */}
+      <div className="absolute top-4 right-4 sm:top-6 sm:right-6 z-20 flex items-center gap-1.5 p-1 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md text-xs">
+        <Globe className="h-3.5 w-3.5 text-purple-400 ml-1.5" />
+        {['Hinglish', 'हिंदी', 'English'].map((lang) => (
+          <button
+            key={lang}
+            onClick={() => setSelectedLanguage(lang)}
+            className={`px-2.5 py-1 rounded-xl font-bold transition-all ${
+              selectedLanguage === lang 
+                ? 'bg-gradient-to-r from-violet-600 to-cyan-500 text-white shadow' 
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            {lang}
+          </button>
+        ))}
+      </div>
+
+      {/* Main Glassmorphic Login Card */}
+      <div className="w-full max-w-md relative z-10 animate-fade-in my-6">
         
-        {/* Mobile Header / Status bar simulation */}
-        <div className="px-6 py-3 bg-slate-900 flex justify-between items-center text-xs text-slate-500 border-b border-white/5">
-          <span>VoiceBill AI</span>
-          <span className="flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span>Online Sandbox</span>
-          </span>
+        {/* Decorative Top Pill */}
+        <div className="flex justify-center mb-4">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-violet-500/10 via-cyan-500/10 to-emerald-500/10 border border-white/10 backdrop-blur-xl text-xs font-bold text-slate-200 shadow-xl">
+            <span className="h-2 w-2 rounded-full bg-emerald-400 animate-ping" />
+            <span>Voice-Powered Retail AI</span>
+            <span className="text-purple-400">v2.5</span>
+          </div>
         </div>
 
-        {/* Content Container */}
-        <div className="flex-1 overflow-y-auto px-6 py-8 flex flex-col">
+        <div className="bg-slate-900/80 border border-white/10 rounded-[36px] p-6 sm:p-8 backdrop-blur-2xl shadow-2xl relative overflow-hidden">
           
-          {/* Logo & Brand Header */}
-          <div className="text-center mb-8">
-            <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-lg shadow-emerald-500/5 mb-4">
-              <Store className="h-7 w-7" />
+          {/* Subtle top edge glow */}
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-violet-500 via-cyan-400 to-emerald-400" />
+
+          {/* Logo & Headline */}
+          <div className="text-center mb-7">
+            <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-tr from-violet-600 via-purple-500 to-cyan-400 text-white shadow-xl shadow-purple-500/25 mb-4 transform hover:scale-105 transition-transform">
+              <Mic className="h-8 w-8" />
             </div>
-            <h2 className="text-2xl font-bold tracking-tight text-white">VoiceBill AI</h2>
-            <p className="text-xs text-slate-400 mt-2">Create professional bills simply by speaking</p>
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">VoiceBill AI</h1>
+            <p className="text-xs text-slate-400 mt-1.5 max-w-xs mx-auto">
+              Bol kar bill banao • Apne kirana aur dukan ko smart AI se tez chalao
+            </p>
           </div>
 
+          {/* Error Message banner */}
           {error && (
-            <div className="mb-5 p-3 rounded-xl bg-red-500/10 border border-red-500/25 text-xs text-red-400 text-center">
-              {error}
+            <div className="mb-5 p-3 rounded-2xl bg-rose-500/10 border border-rose-500/25 text-xs text-rose-300 flex items-center gap-2 animate-fade-in">
+              <AlertCircle className="h-4 w-4 shrink-0 text-rose-400" />
+              <span>{error}</span>
             </div>
           )}
 
-          {/* STEP 1: ENTER PHONE NUMBER */}
+          {/* STEP 1: MOBILE NUMBER INPUT */}
           {step === 'phone' && (
-            <form onSubmit={handleSendOtp} className="space-y-5 flex-1 flex flex-col justify-between">
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Mobile Number</label>
-                  <div className="relative">
-                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-sm font-bold">+91</span>
-                    <input
-                      type="tel"
-                      value={mobile}
-                      onChange={(e) => setMobile(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                      placeholder="Enter 10-digit number"
-                      required
-                      className="w-full pl-14 pr-4 py-3.5 rounded-xl text-white glass-input text-sm font-bold tracking-wide"
-                    />
+            <form onSubmit={handleSendOtp} className="space-y-5">
+              <div>
+                <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-2">
+                  Dukandar Mobile Number
+                </label>
+                <div className="relative">
+                  <div className="absolute left-3.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-slate-400 font-bold text-sm">
+                    <span>🇮🇳 +91</span>
+                    <span className="h-4 w-px bg-white/15" />
                   </div>
+                  <input
+                    type="tel"
+                    value={mobile}
+                    onChange={(e) => setMobile(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                    placeholder="98765 43210"
+                    required
+                    autoFocus
+                    className="w-full pl-24 pr-4 py-3.5 rounded-2xl text-white glass-input text-base font-bold tracking-wider"
+                  />
                 </div>
-
-                <p className="text-[11px] text-slate-500 text-center">
-                  We'll send a 6-digit confirmation OTP to your mobile phone.
+                <p className="text-[11px] text-slate-500 mt-2">
+                  OTP verification code will be sent to this number.
                 </p>
               </div>
 
-              <div className="pt-6">
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full py-3.5 rounded-xl font-bold text-white bg-emerald-500 hover:bg-emerald-600 active:scale-[0.98] transition-all flex items-center justify-center gap-2 group shadow-lg shadow-emerald-500/10"
-                >
-                  <span>{loading ? 'Sending OTP...' : 'Send OTP'}</span>
-                  <ArrowRight className="h-4 w-4" />
-                </button>
+              <button
+                type="submit"
+                disabled={loading || mobile.length < 10}
+                className="w-full py-4 rounded-2xl font-black text-white bg-gradient-to-r from-violet-600 via-purple-600 to-cyan-500 hover:from-violet-500 hover:to-cyan-400 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-xl shadow-purple-500/25 disabled:opacity-40 disabled:pointer-events-none text-sm tracking-wide"
+              >
+                <span>{loading ? 'Sending OTP...' : 'Get Instant OTP'}</span>
+                <ArrowRight className="h-4 w-4" />
+              </button>
 
-                {/* Demo Quick Logins helper */}
-                <div className="mt-8 border-t border-white/5 pt-6">
-                  <span className="block text-[10px] font-bold text-slate-500 uppercase text-center mb-3">Quick Demo Shopkeepers</span>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => fillDemoNumber('9876543210')}
-                      className="py-2.5 px-3 rounded-lg bg-white/5 border border-white/5 hover:bg-white/10 text-xs text-left text-slate-300 font-semibold flex flex-col"
-                    >
-                      <span className="text-[10px] text-emerald-400">Owner Account</span>
-                      <span>9876543210</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => fillDemoNumber('9812345670')}
-                      className="py-2.5 px-3 rounded-lg bg-white/5 border border-white/5 hover:bg-white/10 text-xs text-left text-slate-300 font-semibold flex flex-col"
-                    >
-                      <span className="text-[10px] text-emerald-400">Cashier Account</span>
-                      <span>9812345670</span>
-                    </button>
-                  </div>
+              {/* Quick 1-Click Demo Accounts */}
+              <div className="pt-4 border-t border-white/10">
+                <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest text-center mb-3">
+                  🚀 1-Click Demo Logins
+                </span>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => fillDemoAccount('9876543210', 'Owner')}
+                    className="p-3 rounded-2xl bg-white/5 hover:bg-violet-500/10 border border-white/5 hover:border-violet-500/30 text-left transition-all active:scale-95 group"
+                  >
+                    <span className="text-[10px] font-bold text-violet-400 flex items-center gap-1">
+                      <UserCheck className="h-3 w-3" /> Shop Owner
+                    </span>
+                    <span className="block text-xs font-bold text-slate-200 mt-0.5">Rajesh Gupta</span>
+                    <span className="text-[10px] font-mono text-slate-500">Apna Kirana</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => fillDemoAccount('9812345670', 'Cashier')}
+                    className="p-3 rounded-2xl bg-white/5 hover:bg-cyan-500/10 border border-white/5 hover:border-cyan-500/30 text-left transition-all active:scale-95 group"
+                  >
+                    <span className="text-[10px] font-bold text-cyan-400 flex items-center gap-1">
+                      <Zap className="h-3 w-3" /> Cashier Staff
+                    </span>
+                    <span className="block text-xs font-bold text-slate-200 mt-0.5">Amit Sharma</span>
+                    <span className="text-[10px] font-mono text-slate-500">POS Terminal</span>
+                  </button>
                 </div>
               </div>
             </form>
@@ -237,159 +273,159 @@ export default function Login() {
 
           {/* STEP 2: VERIFY OTP */}
           {step === 'otp' && (
-            <form onSubmit={handleVerifyOtp} className="space-y-5 flex-1 flex flex-col justify-between">
-              <div className="space-y-4">
-                <div className="text-center">
-                  <p className="text-xs text-slate-400">Enter the verification code sent to</p>
-                  <p className="text-sm font-bold text-white mt-1">+91 {mobile}</p>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">6-Digit OTP</label>
-                  <input
-                    type="text"
-                    value={otp}
-                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                    placeholder="Enter 6-digit OTP"
-                    required
-                    className="w-full px-4 py-3.5 rounded-xl text-white glass-input text-center text-lg font-mono font-bold tracking-widest"
-                  />
-                </div>
-
-                <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-400 flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 shrink-0" />
-                  <span>Use code <strong className="font-bold underline">{sentOtp}</strong> to verify instantly.</span>
-                </div>
+            <form onSubmit={handleVerifyOtp} className="space-y-5 animate-fade-in">
+              <div className="text-center">
+                <p className="text-xs text-slate-400">Verification code sent to</p>
+                <p className="text-base font-bold text-white mt-0.5">🇮🇳 +91 {mobile}</p>
               </div>
 
-              <div className="space-y-3 pt-6">
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full py-3.5 rounded-xl font-bold text-white bg-emerald-500 hover:bg-emerald-600 active:scale-[0.98] transition-all flex items-center justify-center gap-2 group shadow-lg shadow-emerald-500/10"
-                >
-                  <span>{loading ? 'Verifying...' : 'Verify & Continue'}</span>
-                  <ArrowRight className="h-4 w-4" />
-                </button>
-                
+              <div>
+                <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-2 text-center">
+                  Enter 6-Digit OTP
+                </label>
+                <input
+                  type="text"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  placeholder="• • • • • •"
+                  required
+                  autoFocus
+                  className="w-full px-4 py-3.5 rounded-2xl text-white glass-input text-center text-xl font-mono font-black tracking-[0.4em]"
+                />
+              </div>
+
+              {/* Fast autofill hint badge */}
+              <div className="p-3 rounded-2xl bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-500/25 text-xs text-emerald-300 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-emerald-400 shrink-0" />
+                  <span>Sandbox Code: <strong>{sentOtp || '123456'}</strong></span>
+                </div>
                 <button
                   type="button"
-                  onClick={() => setStep('phone')}
-                  className="w-full py-2.5 rounded-xl text-xs text-slate-400 hover:text-white transition-colors"
+                  onClick={() => setOtp(sentOtp || '123456')}
+                  className="text-[10px] font-bold bg-emerald-500 text-slate-950 px-2 py-1 rounded-lg hover:bg-emerald-400"
                 >
-                  Edit phone number
+                  Auto-fill
                 </button>
               </div>
-            </form>
-          )}
 
-          {/* STEP 3: NEW SHOP SETUP FORM */}
-          {step === 'setup' && (
-            <form onSubmit={handleShopSetupSubmit} className="space-y-4 flex-1 flex flex-col justify-between">
-              <div className="space-y-3">
-                <div className="text-center mb-2">
-                  <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-bold text-emerald-400 uppercase tracking-wider">
-                    🎉 Setup Shop profile
-                  </span>
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase">Shop Name</label>
-                  <input
-                    type="text"
-                    value={shopName}
-                    onChange={(e) => setShopName(e.target.value)}
-                    placeholder="e.g. Rajesh Kirana Store"
-                    required
-                    className="w-full px-3 py-2 rounded-xl text-white glass-input text-xs"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-2.5">
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase">Business Category</label>
-                    <select
-                      value={category}
-                      onChange={(e) => setCategory(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl text-white glass-input text-xs"
-                    >
-                      <option value="Kirana/Grocery">Kirana/Grocery</option>
-                      <option value="Pharmacy">Pharmacy</option>
-                      <option value="Restaurant">Restaurant</option>
-                      <option value="Clothing Store">Clothing Store</option>
-                      <option value="Hardware Shop">Hardware Shop</option>
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase">Preferred Language</label>
-                    <select
-                      value={preferredLanguage}
-                      onChange={(e) => setPreferredLanguage(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl text-white glass-input text-xs"
-                    >
-                      <option value="Hinglish">Hinglish</option>
-                      <option value="English">English</option>
-                      <option value="Hindi">Hindi (हिंदी)</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase">Shop Address</label>
-                  <input
-                    type="text"
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    placeholder="e.g. Shop No 4, Main Bazar"
-                    className="w-full px-3 py-2 rounded-xl text-white glass-input text-xs"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-2.5">
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase">GSTIN (Optional)</label>
-                    <input
-                      type="text"
-                      value={gstNumber}
-                      onChange={(e) => setGstNumber(e.target.value.toUpperCase())}
-                      placeholder="e.g. 07AAAAA1111A1Z1"
-                      className="w-full px-3 py-2 rounded-xl text-white glass-input text-xs font-mono uppercase"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase">UPI ID for Payments</label>
-                    <input
-                      type="text"
-                      value={upiId}
-                      onChange={(e) => setUpiId(e.target.value)}
-                      placeholder="e.g. shopname@upi"
-                      className="w-full px-3 py-2 rounded-xl text-white glass-input text-xs"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="pt-4">
+              <div className="space-y-2 pt-2">
                 <button
                   type="submit"
-                  disabled={loading}
-                  className="w-full py-3 rounded-xl font-bold text-white bg-emerald-500 hover:bg-emerald-600 active:scale-[0.98] transition-all flex items-center justify-center gap-2 group shadow-lg shadow-emerald-500/10"
+                  disabled={loading || otp.length < 6}
+                  className="w-full py-4 rounded-2xl font-black text-white bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-xl shadow-emerald-500/25 disabled:opacity-40 text-sm"
                 >
-                  <Check className="h-4 w-4" />
-                  <span>{loading ? 'Creating Shop...' : 'Create & Open Shop'}</span>
+                  <ShieldCheck className="h-4 w-4" />
+                  <span>{loading ? 'Verifying...' : 'Verify & Open Terminal'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => { setStep('phone'); setOtp(''); }}
+                  className="w-full py-2.5 rounded-xl text-xs text-slate-400 hover:text-white transition-colors"
+                >
+                  Change Mobile Number
                 </button>
               </div>
             </form>
           )}
 
+          {/* STEP 3: NEW SHOP ONBOARDING */}
+          {step === 'setup' && (
+            <form onSubmit={handleShopSetupSubmit} className="space-y-4 animate-fade-in">
+              <div className="text-center pb-2">
+                <span className="px-3 py-1 rounded-full bg-gradient-to-r from-violet-500/15 to-cyan-500/15 border border-purple-500/30 text-xs font-black text-purple-300 uppercase tracking-wider">
+                  🎉 Welcome! Setup Your Shop
+                </span>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
+                  Dukan / Business Name
+                </label>
+                <input
+                  type="text"
+                  value={shopName}
+                  onChange={(e) => setShopName(e.target.value)}
+                  placeholder="e.g. Gupta General Store"
+                  required
+                  autoFocus
+                  className="w-full px-3.5 py-2.5 rounded-xl text-white glass-input text-xs font-bold"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Category</label>
+                  <select
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl text-white glass-input text-xs font-semibold"
+                  >
+                    <option value="Kirana/Grocery">Kirana/Grocery</option>
+                    <option value="Pharmacy">Pharmacy / Chemist</option>
+                    <option value="Restaurant">Restaurant / Cafe</option>
+                    <option value="Clothing Store">Clothing / Garments</option>
+                    <option value="Hardware Shop">Hardware & Electrical</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">UPI Payee ID</label>
+                  <input
+                    type="text"
+                    value={upiId}
+                    onChange={(e) => setUpiId(e.target.value)}
+                    placeholder="shopname@okaxis"
+                    className="w-full px-3 py-2.5 rounded-xl text-white glass-input text-xs font-mono"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Shop Address</label>
+                <input
+                  type="text"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="Shop No. 4, Main Bazar, Rohini"
+                  className="w-full px-3 py-2.5 rounded-xl text-white glass-input text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">GSTIN Number (Optional)</label>
+                <input
+                  type="text"
+                  value={gstNumber}
+                  onChange={(e) => setGstNumber(e.target.value.toUpperCase())}
+                  placeholder="07AAAAA1111A1Z1"
+                  className="w-full px-3 py-2.5 rounded-xl text-white glass-input text-xs font-mono uppercase"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading || !shopName}
+                className="w-full mt-2 py-3.5 rounded-2xl font-black text-white bg-gradient-to-r from-violet-600 to-cyan-500 hover:from-violet-500 hover:to-cyan-400 transition-all flex items-center justify-center gap-2 shadow-xl shadow-purple-500/25 text-xs uppercase tracking-wider"
+              >
+                <Check className="h-4 w-4" />
+                <span>Launch Voice Billing</span>
+              </button>
+            </form>
+          )}
+
         </div>
 
-        {/* Mobile footer simulation */}
-        <div className="px-6 py-4 bg-slate-900 border-t border-white/5 flex justify-center text-[10px] text-slate-500">
-          <span>© 2026 VoiceBill AI • Secure Offline Invoicing</span>
+        {/* Footer Info */}
+        <div className="mt-6 text-center text-xs text-slate-500 flex items-center justify-center gap-3">
+          <span>🔒 256-Bit Offline Encrypted</span>
+          <span>•</span>
+          <span>Made for Bharat 🇮🇳</span>
         </div>
+
       </div>
+
     </div>
   );
 }
