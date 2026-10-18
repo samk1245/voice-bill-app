@@ -1,9 +1,9 @@
-// Advanced Multilingual voice-command parser running on the client
-// Supports offline mode parsing, mapping numbers, units, products, credit terms, cash payments,
-// item removals, quantity modifications, and voice-triggered invoice actions.
+// Multilingual AI Voice Command & Billing Parser for VoiceBill AI
+// Supports Hindi, English, Hinglish, offline processing, multi-item extraction,
+// price/quantity parsing, discounts, GST instructions, quantity edits, and invoice commands.
 
 const numberMap = {
-  'ek': 1, 'one': 1, '1': 1,
+  'ek': 1, 'one': 1, '1': 1, 'a': 1, 'an': 1,
   'do': 2, 'two': 2, '2': 2,
   'teen': 3, 'three': 3, '3': 3,
   'chaar': 4, 'four': 4, '4': 4,
@@ -13,9 +13,24 @@ const numberMap = {
   'aath': 8, 'eight': 8, '8': 8,
   'nau': 9, 'nine': 9, '9': 9,
   'das': 10, 'ten': 10, '10': 10,
+  'gyaarah': 11, 'eleven': 11, '11': 11,
+  'baarah': 12, 'twelve': 12, '12': 12,
+  'terah': 13, 'thirteen': 13, '13': 13,
+  'chaudah': 14, 'fourteen': 14, '14': 14,
   'pandrah': 15, 'fifteen': 15, '15': 15,
+  'solah': 16, 'sixteen': 16, '16': 16,
+  'satrah': 17, 'seventeen': 17, '17': 17,
+  'athaarah': 18, 'eighteen': 18, '18': 18,
+  'unnees': 19, 'nineteen': 19, '19': 19,
   'bees': 20, 'twenty': 20, '20': 20,
+  'pachees': 25, 'twenty five': 25, '25': 25,
+  'tees': 30, 'thirty': 30, '30': 30,
+  'chaalees': 40, 'forty': 40, '40': 40,
   'pachaas': 50, 'fifty': 50, '50': 50,
+  'saath': 60, 'sixty': 60, '60': 60,
+  'sattar': 70, 'seventy': 70, '70': 70,
+  'assi': 80, 'eighty': 80, '80': 80,
+  'nabbe': 90, 'ninety': 90, '90': 90,
   'sau': 100, 'hundred': 100, '100': 100
 };
 
@@ -25,324 +40,333 @@ const parseNumber = (word) => {
   if (numberMap[normalized] !== undefined) {
     return numberMap[normalized];
   }
-  const parsed = parseInt(normalized);
+  const parsed = parseInt(normalized, 10);
   return isNaN(parsed) ? 1 : parsed;
 };
 
 const unitMap = {
-  'kilo': 'kg', 'kg': 'kg', 'kilos': 'kg',
-  'packet': 'packet', 'packets': 'packet', 'pkt': 'packet',
-  'bottle': 'bottle', 'bottles': 'bottle',
+  'kilo': 'kg', 'kg': 'kg', 'kilos': 'kg', 'kilogram': 'kg',
+  'packet': 'packet', 'packets': 'packet', 'pkt': 'packet', 'pkts': 'packet',
+  'bottle': 'bottle', 'bottles': 'bottle', 'bot': 'bottle',
   'piece': 'piece', 'pieces': 'piece', 'pc': 'piece', 'pcs': 'piece',
-  'gram': 'g', 'grams': 'g', 'g': 'g',
+  'gram': 'g', 'grams': 'g', 'g': 'g', 'gm': 'g', 'gms': 'g',
   'strip': 'strip', 'strips': 'strip',
-  'litre': 'litre', 'litres': 'litre', 'l': 'litre'
+  'litre': 'litre', 'litres': 'litre', 'l': 'litre', 'liter': 'litre', 'liters': 'litre'
 };
 
 const parseUnit = (word) => {
   if (!word) return null;
   const normalized = word.toLowerCase().trim();
-  return unitMap[normalized] || normalized;
+  return unitMap[normalized] || null;
 };
 
-export const parseVoiceCommand = (text, products = [], customers = []) => {
-  const queryText = text.toLowerCase().trim();
+export const parseVoiceCommand = (rawText, products = [], customers = []) => {
+  if (!rawText || typeof rawText !== 'string') {
+    return { intent: 'unknown', message: 'Empty voice command received.' };
+  }
 
-  // 1. Direct Voice Action Commands
-  if (queryText.includes('clear') || queryText.includes('khali karo') || queryText.includes('sab hata do')) {
+  const queryText = rawText.toLowerCase().trim();
+
+  // 1. DIRECT ACTION COMMANDS
+
+  // 1a. Clear Cart
+  if (
+    queryText.includes('clear') ||
+    queryText.includes('khali karo') ||
+    queryText.includes('sab hata do') ||
+    queryText.includes('reset cart')
+  ) {
     return {
       intent: 'action',
       action: 'clear_cart',
-      message: 'Cart cleared by voice'
+      message: 'Cart cleared by voice command.'
     };
   }
 
-  if (queryText.includes('print karo') || queryText.includes('invoice print')) {
+  // 1b. Print Bill / Receipt
+  if (
+    queryText.includes('print receipt') ||
+    queryText.includes('print karo') ||
+    queryText.includes('invoice print') ||
+    queryText.includes('print bill')
+  ) {
     return {
       intent: 'action',
       action: 'print_bill',
-      message: 'Print bill command triggered'
+      message: 'Print receipt command triggered.'
     };
   }
 
-  if (queryText.includes('whatsapp') && (queryText.includes('bhejo') || queryText.includes('share') || queryText.includes('send'))) {
+  // 1c. WhatsApp Share
+  if (
+    queryText.includes('whatsapp') &&
+    (queryText.includes('bhejo') || queryText.includes('share') || queryText.includes('send'))
+  ) {
     return {
       intent: 'action',
       action: 'whatsapp_share',
-      message: 'WhatsApp share command triggered'
+      message: 'WhatsApp invoice share command triggered.'
     };
   }
 
+  // 1d. Save & Confirm / Finalize Bill
   if (
-    (queryText.includes('bill') || queryText.includes('order')) && 
-    (queryText.includes('confirm') || queryText.includes('generate') || queryText.includes('banao') || queryText.includes('done'))
+    (queryText.includes('save') && queryText.includes('bill')) ||
+    (queryText.includes('confirm') && (queryText.includes('bill') || queryText.includes('order'))) ||
+    queryText.includes('bill confirm') ||
+    queryText.includes('bill banao') ||
+    queryText.includes('finalize bill')
   ) {
     return {
       intent: 'action',
       action: 'confirm_bill',
-      message: 'Confirm bill command triggered'
+      message: 'Save and finalize bill command triggered.'
     };
   }
 
-  // 2. Item Removal Commands: "chawal hata do", "remove biscuit", "maggi delete karo"
-  if (queryText.includes('hata do') || queryText.includes('remove') || queryText.includes('delete karo') || queryText.includes('cancel karo')) {
+  // 1e. Show Total
+  if (
+    queryText.includes('show me the total') ||
+    queryText.includes('total batao') ||
+    queryText.includes('what is the total') ||
+    queryText.includes('kitna hua') ||
+    queryText.includes('total amount')
+  ) {
+    return {
+      intent: 'action',
+      action: 'show_total',
+      message: 'Total calculation requested.'
+    };
+  }
+
+  // 2. TAX / GST COMMANDS (e.g., "Add 18 percent GST to eligible products", "Apply 5 percent tax")
+  if (
+    queryText.includes('gst') ||
+    queryText.includes('tax')
+  ) {
+    const taxMatch = queryText.match(/(\d+)\s*(?:percent|%|pratishat)?\s*(?:gst|tax)/) ||
+                     queryText.match(/(?:gst|tax)\s*(?:of|at)?\s*(\d+)/);
+    if (taxMatch) {
+      const rate = parseInt(taxMatch[1], 10);
+      return {
+        intent: 'set_tax',
+        taxRate: rate,
+        message: `Set tax rate to ${rate}% GST.`
+      };
+    }
+  }
+
+  // 3. DISCOUNT COMMANDS (e.g., "Apply a 5 percent discount", "10 rupaye discount laga do", "Discount 50 rupees")
+  if (queryText.includes('discount') || queryText.includes('chhoot')) {
+    const percentMatch = queryText.match(/(\d+)\s*(?:percent|%)\s*(?:discount|chhoot)/);
+    if (percentMatch) {
+      return {
+        intent: 'apply_discount',
+        discountType: 'percentage',
+        value: parseInt(percentMatch[1], 10),
+        message: `Applied ${percentMatch[1]}% discount.`
+      };
+    }
+
+    const flatMatch = queryText.match(/(?:discount|chhoot)\s*(?:of|amount)?\s*(\d+)/) ||
+                      queryText.match(/(\d+)\s*(?:rupees|rupaye|rs|inr)?\s*(?:ka\s*)?(?:discount|chhoot)/);
+    if (flatMatch) {
+      return {
+        intent: 'apply_discount',
+        discountType: 'fixed',
+        value: parseInt(flatMatch[1], 10),
+        message: `Applied ₹${flatMatch[1]} discount.`
+      };
+    }
+  }
+
+  // 4. ITEM REMOVAL COMMANDS (e.g., "Remove the notebook", "chawal hata do", "delete maggi")
+  if (
+    queryText.includes('remove') ||
+    queryText.includes('hata do') ||
+    queryText.includes('delete') ||
+    queryText.includes('cancel')
+  ) {
     let target = queryText
-      .replace(/hata do|remove|delete karo|cancel karo|se|ko|cart/g, '')
+      .replace(/remove|hata do|delete|cancel|the|item|product|se|ko|cart/g, '')
       .trim();
 
-    // Match with products
-    const matched = products.find(p => p.name.toLowerCase().includes(target) || target.includes(p.name.toLowerCase()));
+    const matched = products.find(p =>
+      p.name.toLowerCase().includes(target) || target.includes(p.name.toLowerCase())
+    );
+
     return {
       intent: 'remove_item',
       productName: matched ? matched.name : target,
       productId: matched ? matched._id : null,
-      message: `Item removal triggered for: ${matched ? matched.name : target}`
+      message: `Remove item: ${matched ? matched.name : target}`
     };
   }
 
-  // 3. Quantity Update Commands: "chawal 3 kilo kar do", "maggi 5 packet kar do"
-  const updateMatch = queryText.match(/([a-z\s]+?)\s+(\d+|ek|do|teen|chaar|paanch|chhe|saat|aath|nau|das|bees)\s*(kilo|kg|packet|piece|bottle|gram|litre)?\s*(?:kar do|karo|change)/);
-  if (updateMatch && !queryText.includes('add') && !queryText.includes('dena')) {
-    const rawProd = updateMatch[1].trim();
-    const qty = parseNumber(updateMatch[2]);
-    const unit = parseUnit(updateMatch[3]);
-    const matched = products.find(p => p.name.toLowerCase().includes(rawProd) || rawProd.includes(p.name.toLowerCase()));
-
-    if (matched) {
-      return {
-        intent: 'update_qty',
-        productId: matched._id,
-        productName: matched.name,
-        quantity: qty,
-        unit: unit || matched.unit,
-        message: `Updated quantity for ${matched.name} to ${qty}`
-      };
-    }
-  }
-
-  // 4. Sales Assistant Queries
+  // 5. QUANTITY EDIT COMMANDS (e.g., "Change the quantity of pens to 10", "chawal 3 kilo kar do")
   if (
-    queryText.includes('sale') || 
-    queryText.includes('bik') || 
-    queryText.includes('stock') || 
-    queryText.includes('kam') || 
-    queryText.includes('profit') || 
-    queryText.includes('batao')
+    queryText.includes('change the quantity') ||
+    queryText.includes('change quantity') ||
+    queryText.includes('kar do') ||
+    queryText.includes('badal do')
   ) {
-    let salesIntent = 'general';
-    if (queryText.includes('aaj') || queryText.includes('today')) salesIntent = 'today_sales';
-    else if (queryText.includes('sabse zyada') || queryText.includes('most sold') || queryText.includes('highest')) salesIntent = 'top_products';
-    else if (queryText.includes('kam') || queryText.includes('low') || queryText.includes('stock')) salesIntent = 'low_stock';
-    else if (queryText.includes('kal') || queryText.includes('yesterday')) salesIntent = 'compare_sales';
-    else if (queryText.includes('profit')) salesIntent = 'profit';
+    const qtyMatch = queryText.match(/(?:to|kar do)\s*(\d+|ek|do|teen|chaar|paanch|chhe|saat|aath|nau|das|twenty|ten|fifteen)/);
+    if (qtyMatch) {
+      const newQty = parseNumber(qtyMatch[1]);
+      let itemTarget = queryText
+        .replace(/change the quantity of|change quantity of|change|to|kar do|badal do|quantity|ko|\d+/g, '')
+        .trim();
 
-    return {
-      intent: 'sales_query',
-      query: text,
-      salesIntent,
-      message: 'Sales assistant query parsed'
-    };
+      const matched = products.find(p =>
+        p.name.toLowerCase().includes(itemTarget) || itemTarget.includes(p.name.toLowerCase())
+      );
+
+      return {
+        intent: 'update_quantity',
+        productName: matched ? matched.name : itemTarget,
+        productId: matched ? matched._id : null,
+        newQuantity: newQty,
+        message: `Updated quantity of ${matched ? matched.name : itemTarget} to ${newQty}.`
+      };
+    }
   }
 
-  // 5. Payments & Cash Change Calculations
-  const cashDiyaMatch = queryText.match(/(?:customer ne\s+)?(\d+|ek|do|teen|paanch|sau|hundred)\s*(?:rupaye|rs|rupya|rupees)?\s*(?:cash|diye|diya)/);
-  if (cashDiyaMatch) {
-    const cashReceived = parseNumber(cashDiyaMatch[1]);
-    return {
-      intent: 'payment',
-      paymentMethod: 'Cash',
-      cashReceived,
-      message: `Extracted cash payment of ₹${cashReceived}`
-    };
-  }
+  // 6. UDHAAR / LEDGER COMMANDS (e.g., "Ramesh ke account mein 500 rupaye ka udhaar add karo")
+  if (queryText.includes('udhaar') || queryText.includes('credit')) {
+    const amountMatch = queryText.match(/(\d+)\s*(?:rupees|rupaye|rs)?/);
+    const amount = amountMatch ? parseInt(amountMatch[1], 10) : 0;
 
-  // 6. Credit/Udhaar Commands
-  if (queryText.includes('udhaar') || queryText.includes('credit') || queryText.includes('khata')) {
-    let customerName = null;
-    let amount = null;
-
-    for (const cust of customers) {
-      if (queryText.includes(cust.name.toLowerCase()) || queryText.includes(cust.name.split(' ')[0].toLowerCase())) {
-        customerName = cust.name;
-        break;
+    let custName = null;
+    customers.forEach(c => {
+      if (queryText.includes(c.name.toLowerCase())) {
+        custName = c.name;
       }
-    }
-
-    const amountMatch = queryText.match(/(\d+|ek|do|teen|paanch|sau|hundred)\s*(?:rupaye|rs|rupya|rupees)?/);
-    if (amountMatch) {
-      amount = parseNumber(amountMatch[1]);
-    }
-
-    if (amount) {
-      return {
-        intent: 'credit',
-        customerName: customerName || 'Unknown Customer',
-        amount,
-        message: `Extracted credit details: ₹${amount} for ${customerName || 'customer'}`
-      };
-    }
-  }
-
-  // 7. Discounts
-  const discountMatch = queryText.match(/(\d+|ek|do|teen|paanch|sau|hundred)\s*(?:rupaye|rs|rupya|rupees)?\s*(?:discount|off|kam)/);
-  if (discountMatch) {
-    const discount = parseNumber(discountMatch[1]);
-    return {
-      intent: 'discount',
-      discount,
-      message: `Discount of ₹${discount} parsed.`
-    };
-  }
-
-  // 8. Add Product Voice Command
-  if (queryText.includes('naya product') || queryText.includes('add product') || queryText.includes('new product')) {
-    let productName = '';
-    let price = 0;
-    let stock = 0;
-    let unit = 'packet';
-
-    const nameMatch = text.match(/(?:product|karo|naam|name)\s+([^,]+)(?:,\s*|price|daam|$)/i);
-    if (nameMatch) productName = nameMatch[1].trim();
-
-    const priceMatch = queryText.match(/(?:price|daam|rupees|₹|rs)\s*(\d+)/);
-    if (priceMatch) price = parseInt(priceMatch[1]);
-
-    const stockMatch = queryText.match(/(?:stock|qty|quantity)\s*(\d+)\s*(packet|bottle|kg|piece|piece|pc|g)?/);
-    if (stockMatch) {
-      stock = parseInt(stockMatch[1]);
-      if (stockMatch[2]) unit = parseUnit(stockMatch[2]);
-    }
-
-    if (productName) {
-      return {
-        intent: 'add_product',
-        product: { name: productName, price, stock, unit },
-        message: `New product parsed: ${productName}`
-      };
-    }
-  }
-
-  // 9. Add Customer Command
-  if (queryText.includes('customer') && (queryText.includes('naya') || queryText.includes('new') || queryText.includes('add'))) {
-    const nameMatch = text.match(/(?:naam|name|customer)\s+([A-Za-z]+)/i);
-    const mobileMatch = queryText.match(/(?:phone|mobile|number)?\s*([6-9]\d{9})/);
-    if (nameMatch) {
-      return {
-        intent: 'add_customer',
-        customer: {
-          name: nameMatch[1].trim(),
-          mobile: mobileMatch ? mobileMatch[1] : ''
-        },
-        message: `Customer parsed: ${nameMatch[1]}`
-      };
-    }
-  }
-
-  // 10. Core Invoice Billing Parser (Extract products, quantities, units)
-  const sentences = queryText.split(/(?:aur|and|,|dena|\+)/);
-  const items = [];
-  const clarifications = [];
-
-  let customerName = null;
-  const customerPrefixMatch = queryText.match(/^([a-z]+)\s+ko/i);
-  if (customerPrefixMatch) {
-    const nameCandidate = customerPrefixMatch[1];
-    const match = customers.find(c => c.name.toLowerCase().startsWith(nameCandidate));
-    if (match) customerName = match.name;
-  }
-
-  for (let part of sentences) {
-    part = part.trim();
-    if (!part) continue;
-
-    if (customerName && part.startsWith(customerName.toLowerCase())) {
-      part = part.replace(customerName.toLowerCase(), '').trim();
-    }
-    if (part.startsWith('ko')) part = part.replace(/^ko\s+/, '').trim();
-    if (part.includes('add karo') || part.includes('laga do')) {
-      part = part.replace(/add karo|laga do/g, '').trim();
-    }
-
-    const regex = /(\d+|ek|do|teen|chaar|paanch|chhe|saat|aath|nau|das|sau|one|two|three|four|five|six|seven|eight|nine|ten|sau)\s*(kilo|kg|packet|piece|piece|pc|pcs|bottle|bottles|gram|grams|g|strip|strips|litre|litres|l)?\s+([a-z0-9\s\-]+)/i;
-    const match = part.match(regex);
-
-    let qty = 1;
-    let unit = null;
-    let productSearchTerm = part;
-
-    if (match) {
-      qty = parseNumber(match[1]);
-      unit = parseUnit(match[2]);
-      productSearchTerm = match[3].trim();
-    } else {
-      const simpleNumberMatch = part.match(/^(\d+)\s+([a-z0-9\s\-]+)/i);
-      if (simpleNumberMatch) {
-        qty = parseInt(simpleNumberMatch[1]);
-        productSearchTerm = simpleNumberMatch[2].trim();
-      }
-    }
-
-    if (!productSearchTerm || ['batao', 'dikhaye', 'add', 'karo', 'dena'].includes(productSearchTerm)) {
-      continue;
-    }
-
-    const matches = products.filter(p => {
-      const pName = p.name.toLowerCase();
-      return pName.includes(productSearchTerm) || 
-             productSearchTerm.includes(pName) ||
-             (p.category && p.category.toLowerCase().includes(productSearchTerm));
     });
 
-    if (matches.length === 0) {
-      const words = productSearchTerm.split(' ');
-      const partialMatches = products.filter(p => {
-        const pName = p.name.toLowerCase();
-        return words.some(w => w.length > 2 && pName.includes(w));
-      });
-      if (partialMatches.length > 0) {
-        matches.push(...partialMatches);
+    if (custName && amount > 0) {
+      return {
+        intent: 'udhaar_record',
+        customerName: custName,
+        amount,
+        message: `Recorded ₹${amount} credit for ${custName}.`
+      };
+    }
+  }
+
+  // 7. MULTI-ITEM BILLING PARSER
+  // Split command by "and", "aur", "plus", or comma
+  const segments = queryText
+    .split(/\s+aur\s+|\s+and\s+|\s+plus\s+|,\s*/)
+    .map(s => s.trim())
+    .filter(Boolean);
+
+  const detectedItems = [];
+  const detectedClarifications = [];
+  let detectedCustomer = null;
+
+  // Check customer mention across text
+  customers.forEach(c => {
+    if (queryText.includes(c.name.toLowerCase())) {
+      detectedCustomer = { name: c.name, mobile: c.mobile, _id: c._id };
+    }
+  });
+
+  segments.forEach(segment => {
+    // Strip introductory words
+    let seg = segment.replace(/^(add|dena|de do|karo|please|daal do)\s+/i, '').trim();
+
+    // Check explicit price: "at 50 rupees each", "at 50 rs", "price 25"
+    let explicitPrice = null;
+    const priceMatch = seg.match(/(?:at|price|ke bhaav|rate)?\s*(\d+)\s*(?:rupees|rupaye|rs|each|prati)?/i);
+    if (seg.includes('at ') || seg.includes('each') || seg.includes('rate') || seg.includes('price')) {
+      if (priceMatch) {
+        explicitPrice = parseInt(priceMatch[1], 10);
+        seg = seg.replace(priceMatch[0], '').trim();
       }
     }
 
-    if (matches.length === 1) {
-      const matchProd = matches[0];
-      items.push({
-        productId: matchProd._id,
-        name: matchProd.name,
-        price: matchProd.price,
+    // Extract quantity and unit
+    const words = seg.split(/\s+/);
+    let qty = 1;
+    let unit = null;
+    let remainingWords = [];
+
+    for (let i = 0; i < words.length; i++) {
+      const w = words[i].toLowerCase();
+      if (i === 0 && (numberMap[w] !== undefined || !isNaN(parseInt(w, 10)))) {
+        qty = parseNumber(w);
+      } else if (i === 1 && parseUnit(w)) {
+        unit = parseUnit(w);
+      } else {
+        remainingWords.push(words[i]);
+      }
+    }
+
+    const searchTarget = remainingWords.join(' ').toLowerCase().trim();
+    if (!searchTarget) return;
+
+    // Search against products
+    const exactMatch = products.find(p => p.name.toLowerCase() === searchTarget);
+    const partialMatches = products.filter(p => {
+      const pName = p.name.toLowerCase();
+      return pName.includes(searchTarget) || searchTarget.includes(pName);
+    });
+
+    if (exactMatch) {
+      detectedItems.push({
+        productId: exactMatch._id,
+        sku: exactMatch.sku || 'SKU-000',
+        name: exactMatch.name,
+        price: explicitPrice !== null ? explicitPrice : exactMatch.price,
         quantity: qty,
-        unit: unit || matchProd.unit || 'packet',
-        total: matchProd.price * qty
+        unit: unit || exactMatch.unit || 'pcs',
+        taxRate: exactMatch.taxRate || 5,
+        stock: exactMatch.stock || 0
       });
-    } else if (matches.length > 1) {
-      clarifications.push({
-        searchTerm: productSearchTerm,
+    } else if (partialMatches.length === 1) {
+      detectedItems.push({
+        productId: partialMatches[0]._id,
+        sku: partialMatches[0].sku || 'SKU-000',
+        name: partialMatches[0].name,
+        price: explicitPrice !== null ? explicitPrice : partialMatches[0].price,
         quantity: qty,
-        unit: unit || 'packet',
-        options: matches.map(m => ({
-          productId: m._id,
-          name: m.name,
-          price: m.price,
-          unit: m.unit
-        }))
+        unit: unit || partialMatches[0].unit || 'pcs',
+        taxRate: partialMatches[0].taxRate || 5,
+        stock: partialMatches[0].stock || 0
+      });
+    } else if (partialMatches.length > 1) {
+      // Ambiguity: e.g. "Parle-G 50g" vs "Parle-G 100g"
+      detectedClarifications.push({
+        term: searchTarget,
+        quantity: qty,
+        unit: unit || 'pcs',
+        options: partialMatches
       });
     } else {
-      clarifications.push({
-        searchTerm: productSearchTerm,
+      // Unrecognized product: Prompt user confirmation rather than inventing prices silently
+      detectedClarifications.push({
+        term: searchTarget,
         quantity: qty,
-        unit: unit || 'packet',
-        notFound: true,
-        options: []
+        unit: unit || 'pcs',
+        unrecognized: true,
+        suggestedPrice: explicitPrice || 0
       });
     }
+  });
+
+  if (detectedItems.length > 0 || detectedClarifications.length > 0) {
+    return {
+      intent: 'billing_items',
+      customer: detectedCustomer,
+      items: detectedItems,
+      clarifications: detectedClarifications,
+      message: `Detected ${detectedItems.length} item(s) for billing.`
+    };
   }
 
   return {
-    intent: 'billing',
-    customerName,
-    items,
-    clarifications,
-    hasAmbiguity: clarifications.length > 0,
-    message: `Parsed ${items.length} items with ${clarifications.length} clarifications.`
+    intent: 'unknown',
+    queryText,
+    message: 'Could not understand the command. You can speak products with quantity, e.g. "Add 2 notebooks at 50 rupees each".'
   };
 };
