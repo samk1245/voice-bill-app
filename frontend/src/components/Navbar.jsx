@@ -102,8 +102,8 @@ export default function Navbar({ storeDetails }) {
               <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
                 <StoreIcon className="h-5 w-5 text-white" />
               </div>
-              <span className="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400">
-                ZAALIMA
+              <span className="text-xl font-black text-slate-900 dark:text-white">
+                VoiceBill AI
               </span>
             </Link>
           </div>

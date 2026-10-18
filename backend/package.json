@@ -1,7 +1,7 @@
 {
-  "name": "multi-tenant-saas-backend",
+  "name": "voicebill-ai-backend",
   "version": "1.0.0",
-  "description": "Backend API for Multi-Tenant E-Commerce SaaS",
+  "description": "Backend API for VoiceBill AI Smart Voice Invoicing and POS",
   "main": "server.js",
   "type": "module",
   "scripts": {
