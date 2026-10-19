@@ -277,7 +277,8 @@ router.post('/create', authenticate, async (req, res) => {
         discount: itemDiscount,
         taxRate,
         taxAmount: lineTax,
-        lineTotal
+        lineTotal,
+        image: dbProduct?.image || item.image || ''
       });
     }
 

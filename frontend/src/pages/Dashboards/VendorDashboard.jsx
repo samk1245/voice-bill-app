@@ -22,7 +22,8 @@ import {
   AlertTriangle, X, Check, ArrowRight, ArrowLeft, Sun, Moon, 
   Volume2, VolumeX, Shield, CreditCard, Landmark, DollarSign,
   TrendingUp, Phone, Mail, MapPin, Upload, ChevronDown, 
-  ChevronRight, Filter, AlertCircle, Sparkles, Send, Copy
+  ChevronRight, Filter, AlertCircle, Sparkles, Send, Copy,
+  QrCode, Zap, ShoppingBag
 } from 'lucide-react';
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4'];
@@ -41,7 +42,7 @@ export default function VendorDashboard() {
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [talkbackEnabled, setTalkbackEnabled] = useState(true);
 
-  // Active Navigation Tab: 'dashboard' | 'billing' | 'products' | 'customers' | 'bills' | 'reports' | 'settings'
+  // Active Navigation Tab: 'billing' | 'dashboard' | 'products' | 'customers' | 'bills' | 'reports'
   const [activeTab, setActiveTab] = useState('billing');
 
   // Stores & Shop Data
@@ -69,12 +70,12 @@ export default function VendorDashboard() {
   const [speechText, setSpeechText] = useState('');
   const [isProcessingAI, setIsProcessingAI] = useState(false);
   const [liveTranscript, setLiveTranscript] = useState('');
-  const [micPermission, setMicPermission] = useState('prompt'); // 'granted' | 'denied' | 'prompt'
+  const [micPermission, setMicPermission] = useState('prompt');
   const recognitionRef = useRef(null);
 
   // Current Bill Form & Cart
   const [cartItems, setCartItems] = useState([]);
-  const [cartCustomer, setCartCustomer] = useState(null); // { name, mobile, address, gstin }
+  const [cartCustomer, setCartCustomer] = useState(null);
   const [cartCustomerInput, setCartCustomerInput] = useState({ name: '', mobile: '', address: '', gstin: '' });
   const [overallDiscount, setOverallDiscount] = useState(0);
   const [isInterState, setIsInterState] = useState(false);
@@ -87,6 +88,10 @@ export default function VendorDashboard() {
   // Fast Product Search & Add in Billing Screen
   const [billingProductSearch, setBillingProductSearch] = useState('');
   const [billingCategoryFilter, setBillingCategoryFilter] = useState('All');
+
+  // Barcode Scanner Simulator Modal
+  const [showBarcodeModal, setShowBarcodeModal] = useState(false);
+  const [barcodeInput, setBarcodeInput] = useState('');
 
   // Ambiguity / Clarification Modal
   const [clarifications, setClarifications] = useState([]);
@@ -103,7 +108,7 @@ export default function VendorDashboard() {
   const [editingProduct, setEditingProduct] = useState(null);
   const [productForm, setProductForm] = useState({
     name: '', sku: '', barcode: '', category: 'General', unit: 'piece',
-    price: '', costPrice: '', taxRate: 5, stock: '', lowStockAlertLimit: 10, status: 'Active'
+    price: '', costPrice: '', taxRate: 5, stock: '', lowStockAlertLimit: 10, status: 'Active', image: ''
   });
   const [showStockAdjustModal, setShowStockAdjustModal] = useState(false);
   const [stockAdjustItem, setStockAdjustItem] = useState(null);
@@ -125,7 +130,6 @@ export default function VendorDashboard() {
   // Bills History States
   const [billSearch, setBillSearch] = useState('');
   const [billStatusFilter, setBillStatusFilter] = useState('All');
-  const [billPaymentMethodFilter, setBillPaymentMethodFilter] = useState('All');
   const [showSubsequentPayModal, setShowSubsequentPayModal] = useState(false);
   const [subsequentPayOrder, setSubsequentPayOrder] = useState(null);
   const [subsequentPayAmount, setSubsequentPayAmount] = useState('');
@@ -307,7 +311,6 @@ export default function VendorDashboard() {
         if (talkbackEnabled) speakVoice(`${parsed.value} rupaye discount laga diya gaya hai.`);
         addToast(parsed.message, 'success');
       } else if (parsed.intent === 'set_tax') {
-        // Update tax rate across cart
         setCartItems(prev => prev.map(item => ({ ...item, taxRate: parsed.taxRate })));
         if (soundEnabled) playClickSound();
         if (talkbackEnabled) speakVoice(`${parsed.taxRate} percent GST apply kar diya.`);
@@ -372,6 +375,7 @@ export default function VendorDashboard() {
           ...existing,
           quantity: updatedQty,
           price: productToAdd.price !== undefined ? productToAdd.price : existing.price,
+          image: existing.image || productToAdd.image || '',
           lineTotal: Math.round(((existing.price * updatedQty) - (existing.discount || 0)) * 100) / 100
         };
         return copy;
@@ -395,7 +399,8 @@ export default function VendorDashboard() {
           taxRate,
           taxAmount,
           lineTotal,
-          stock: productToAdd.stock
+          stock: productToAdd.stock,
+          image: productToAdd.image || ''
         }];
       }
     });
@@ -434,6 +439,109 @@ export default function VendorDashboard() {
     setCashReceived('');
     setBillNotes('');
     if (soundEnabled) playDeleteSound();
+  };
+
+  // FEATURE: Load 6 Popular Grocery Items with Pictures into the Cart
+  const handleLoadQuickGroceryCart = () => {
+    const popularSamples = [
+      { name: 'Basmati Rice (Chawal)', sku: 'GRA-RIC-001', price: 60, quantity: 2, unit: 'kg', taxRate: 5, image: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=300&q=80' },
+      { name: 'Aashirvaad Shudh Chakki Atta 5kg', sku: 'GRA-AAT-003', price: 235, quantity: 1, unit: 'packet', taxRate: 5, image: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=300&q=80' },
+      { name: 'Tata Salt Vacuum Evaporated 1kg', sku: 'GRO-SAL-009', price: 28, quantity: 1, unit: 'packet', taxRate: 0, image: 'https://images.unsplash.com/photo-1615485290382-441e4d049cb5?auto=format&fit=crop&w=300&q=80' },
+      { name: 'Maggi 2-Minute Masala Noodles 70g', sku: 'SNK-MAG-015', price: 14, quantity: 3, unit: 'packet', taxRate: 12, image: 'https://images.unsplash.com/photo-1612927601601-6638404737ce?auto=format&fit=crop&w=300&q=80' },
+      { name: 'Amul Butter Pasteurized 100g', sku: 'DAI-BUT-013', price: 58, quantity: 1, unit: 'packet', taxRate: 12, image: 'https://images.unsplash.com/photo-1589985270826-4b7bb135bc9d?auto=format&fit=crop&w=300&q=80' },
+      { name: 'Britannia Good Day Butter Cookies 120g', sku: 'SNK-GUD-017', price: 30, quantity: 2, unit: 'packet', taxRate: 5, image: 'https://images.unsplash.com/photo-1558961363-fa8fdf82db35?auto=format&fit=crop&w=300&q=80' }
+    ];
+
+    setCartItems(popularSamples.map(item => {
+      const lineSub = item.price * item.quantity;
+      const taxAmt = Math.round((lineSub * (item.taxRate / 100)) * 100) / 100;
+      return {
+        ...item,
+        productId: `quick_${item.sku}`,
+        discount: 0,
+        taxAmount: taxAmt,
+        lineTotal: Math.round((lineSub + taxAmt) * 100) / 100
+      };
+    }));
+
+    setCartCustomerInput({
+      name: 'Ramesh Kumar',
+      mobile: '9876543210',
+      address: 'B-42, Sector 4, Rohini, New Delhi',
+      gstin: '07AAACR1234D1Z2'
+    });
+
+    if (soundEnabled) playSuccessChime();
+    addToast('Loaded 6 popular grocery products with pictures into cart!', 'success');
+  };
+
+  // FEATURE: Smart Grocery Combos
+  const groceryCombos = [
+    {
+      id: 'chai_combo',
+      name: 'Chai-Nashta Combo',
+      emoji: '☕',
+      badge: 'Popular',
+      desc: 'Tata Tea + Parle-G + Good Day + Sugar',
+      items: [
+        { name: 'Tata Tea Premium Desh Ki Chai 500g', qty: 1 },
+        { name: 'Sugar (Cheeni) 1kg', qty: 1 },
+        { name: 'Parle-G Gold Biscuits 100g', qty: 2 },
+        { name: 'Britannia Good Day Butter Cookies 120g', qty: 1 }
+      ]
+    },
+    {
+      id: 'dal_chawal',
+      name: 'Dal-Chawal Staples',
+      emoji: '🍛',
+      badge: 'Daily Essential',
+      desc: 'Rice 2kg + Toor Dal + Salt + Mustard Oil',
+      items: [
+        { name: 'Basmati Rice (Chawal)', qty: 2 },
+        { name: 'Tata Sampann Toor Dal (Arhar) 1kg', qty: 1 },
+        { name: 'Tata Salt Vacuum Evaporated 1kg', qty: 1 },
+        { name: 'Fortune Kachi Ghani Mustard Oil 1L', qty: 1 }
+      ]
+    },
+    {
+      id: 'snack_pack',
+      name: 'Snack Munchies Pack',
+      emoji: '🍜',
+      badge: 'Quick Bite',
+      desc: '2x Maggi + Coca-Cola + Kurkure + Lay\'s',
+      items: [
+        { name: 'Maggi 2-Minute Masala Noodles 70g', qty: 2 },
+        { name: 'Coca Cola Bottle 500ml', qty: 1 },
+        { name: 'Kurkure Masala Munch 82g', qty: 1 },
+        { name: 'Lay\'s India\'s Magic Masala Chips 50g', qty: 1 }
+      ]
+    },
+    {
+      id: 'clean_home',
+      name: 'Home Hygiene Pack',
+      emoji: '🧼',
+      badge: 'Weekly Kit',
+      desc: 'Surf Excel + Vim Bar + Dettol Soap + Colgate',
+      items: [
+        { name: 'Surf Excel Easy Wash Detergent Powder 1kg', qty: 1 },
+        { name: 'Vim Dishwash Lemon Bar 300g', qty: 2 },
+        { name: 'Dettol Original Bathing Soap 125g', qty: 2 },
+        { name: 'Colgate Strong Teeth Dental Cream 150g', qty: 1 }
+      ]
+    }
+  ];
+
+  const handleAddCombo = (combo) => {
+    let addedCount = 0;
+    combo.items.forEach(cItem => {
+      const match = products.find(p => p.name.toLowerCase().includes(cItem.name.toLowerCase()) || cItem.name.toLowerCase().includes(p.name.toLowerCase()));
+      if (match) {
+        addItemToCart({ ...match, quantity: cItem.qty });
+        addedCount++;
+      }
+    });
+    if (soundEnabled) playSuccessChime();
+    addToast(`Added "${combo.name}" (${addedCount} items) to your bill!`, 'success');
   };
 
   // REAL-TIME TOTALS CALCULATION
@@ -531,7 +639,6 @@ export default function VendorDashboard() {
       addToast(`Invoice #${data.invoiceNumber} created successfully!`, 'success');
       setReceiptInvoice(data);
 
-      // Refresh store data & reset cart
       handleClearCart();
       fetchAllStoreData(selectedStore._id);
 
@@ -576,7 +683,7 @@ export default function VendorDashboard() {
         setEditingProduct(null);
         setProductForm({
           name: '', sku: '', barcode: '', category: 'General', unit: 'piece',
-          price: '', costPrice: '', taxRate: 5, stock: '', lowStockAlertLimit: 10, status: 'Active'
+          price: '', costPrice: '', taxRate: 5, stock: '', lowStockAlertLimit: 10, status: 'Active', image: ''
         });
         fetchAllStoreData(selectedStore._id);
       } else {
@@ -636,12 +743,11 @@ export default function VendorDashboard() {
   const handleBulkImportCsv = async () => {
     if (!bulkCsvText.trim()) return;
     try {
-      // Parse CSV rows
       const lines = bulkCsvText.trim().split('\n');
       const parsedProducts = [];
 
       lines.forEach((line, index) => {
-        if (index === 0 && line.toLowerCase().includes('name')) return; // skip header
+        if (index === 0 && line.toLowerCase().includes('name')) return;
         const cols = line.split(',').map(c => c.trim().replace(/^"|"$/g, ''));
         if (cols[0] && cols[4]) {
           parsedProducts.push({
@@ -652,13 +758,14 @@ export default function VendorDashboard() {
             price: Number(cols[4] || 0),
             unit: cols[5] || 'piece',
             stock: Number(cols[6] || 0),
-            taxRate: Number(cols[7] || 5)
+            taxRate: Number(cols[7] || 5),
+            image: cols[8] || ''
           });
         }
       });
 
       if (parsedProducts.length === 0) {
-        addToast('No valid rows found in CSV. Format: Name, SKU, Barcode, Category, Price, Unit, Stock, TaxRate', 'error');
+        addToast('No valid rows found in CSV. Format: Name, SKU, Barcode, Category, Price, Unit, Stock, TaxRate, Image', 'error');
         return;
       }
 
@@ -820,7 +927,7 @@ export default function VendorDashboard() {
                   VoiceBill AI
                 </h1>
                 <span className="hidden sm:inline-block px-2 py-0.5 text-[10px] font-semibold bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 rounded-full">
-                  Smart POS
+                  Smart Kirana POS
                 </span>
               </div>
               <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 mt-0.5">
@@ -841,9 +948,8 @@ export default function VendorDashboard() {
             </div>
           </div>
 
-          {/* Quick Controls: Mute, Dark Mode, Role, User Logout */}
+          {/* Quick Controls */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Audio Toggle */}
             <button
               onClick={() => setSoundEnabled(prev => !prev)}
               className="p-2 rounded-lg text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
@@ -852,7 +958,6 @@ export default function VendorDashboard() {
               {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4 text-slate-400" />}
             </button>
 
-            {/* Dark Mode Toggle */}
             <button
               onClick={toggleDarkMode}
               className="p-2 rounded-lg text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
@@ -861,7 +966,6 @@ export default function VendorDashboard() {
               {darkMode ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4" />}
             </button>
 
-            {/* Role Switcher Pill */}
             <div className="hidden md:flex items-center border border-slate-200 dark:border-slate-800 rounded-lg p-0.5 bg-slate-100 dark:bg-slate-800/60 text-xs">
               <button
                 onClick={() => setActiveRole('Owner')}
@@ -877,7 +981,6 @@ export default function VendorDashboard() {
               </button>
             </div>
 
-            {/* Logout Button */}
             <button
               onClick={() => {
                 dispatch(logout());
@@ -978,7 +1081,7 @@ export default function VendorDashboard() {
         {activeTab === 'billing' && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-fade-in">
             
-            {/* Left 7 Cols: Voice Engine, Search Shelf & Fast Touch Catalog */}
+            {/* Left 7 Cols: Voice Engine, Combos & Visual Product Catalog */}
             <div className="lg:col-span-7 space-y-5">
               
               {/* Prominent Voice Assistant Bar */}
@@ -990,11 +1093,10 @@ export default function VendorDashboard() {
                     </div>
                     <div>
                       <h2 className="font-bold text-sm text-slate-900 dark:text-white">AI Voice Billing Engine</h2>
-                      <p className="text-xs text-slate-500">Speak naturally in Hindi, English, or Hinglish</p>
+                      <p className="text-xs text-slate-500">Speak naturally: "2 kilo chawal, ek Maggi, aur do Amul butter"</p>
                     </div>
                   </div>
 
-                  {/* Mic Status Badge */}
                   <div className="flex items-center gap-2 text-xs">
                     {isRecording ? (
                       <span className="flex items-center gap-1.5 text-red-600 font-semibold animate-pulse">
@@ -1032,7 +1134,7 @@ export default function VendorDashboard() {
                       <div>
                         <div className="text-xs font-semibold text-slate-700 dark:text-slate-300">Tap mic to speak bill</div>
                         <div className="text-xs text-slate-500 mt-0.5">
-                          Try: <span className="font-medium text-slate-700 dark:text-slate-300">"Add two notebooks at 50 rupees each and five pens at 10 rupees"</span>
+                          Try: <span className="font-medium text-slate-700 dark:text-slate-300">"Ek packet Surf Excel aur do packet Tata Salt"</span>
                         </div>
                       </div>
                     )}
@@ -1044,7 +1146,7 @@ export default function VendorDashboard() {
                   <div className="relative flex-1">
                     <input
                       type="text"
-                      placeholder='Or type billing command, e.g. "2 kilo chawal, ek Maggi"'
+                      placeholder='Or type billing command, e.g. "2 kilo chawal, ek Maggi, ek Amul butter"'
                       value={speechText}
                       onChange={(e) => setSpeechText(e.target.value)}
                       onKeyDown={(e) => {
@@ -1065,40 +1167,88 @@ export default function VendorDashboard() {
                 </div>
               </div>
 
-              {/* Fast Touch Shelf & Category Filter */}
+              {/* FEATURE: Quick Grocery Combos Strip */}
+              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Zap className="h-4 w-4 text-amber-500" />
+                    <h3 className="font-bold text-xs uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                      ⚡ Quick Grocery Combos (1-Tap Add)
+                    </h3>
+                  </div>
+                  <span className="text-[10px] text-slate-400">Frequent Bundles</span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                  {groceryCombos.map(combo => (
+                    <button
+                      key={combo.id}
+                      onClick={() => handleAddCombo(combo)}
+                      className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:border-blue-300 dark:hover:border-blue-700 text-left transition flex flex-col justify-between group shadow-2xs"
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xl">{combo.emoji}</span>
+                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300">
+                          {combo.badge}
+                        </span>
+                      </div>
+                      <div>
+                        <div className="font-bold text-xs text-slate-900 dark:text-white group-hover:text-blue-600 transition-colors">
+                          {combo.name}
+                        </div>
+                        <div className="text-[10px] text-slate-400 mt-0.5 line-clamp-1">
+                          {combo.desc}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Fast Touch Shelf with Product Photos & Category Filter */}
               <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm space-y-4">
+                
+                {/* Search & Barcode Button */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="relative flex-1">
                     <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
                     <input
                       type="text"
-                      placeholder="Search product by name, SKU, or scan barcode..."
+                      placeholder="Search grocery item, SKU, or brand..."
                       value={billingProductSearch}
                       onChange={(e) => setBillingProductSearch(e.target.value)}
                       className="w-full pl-9 pr-4 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600"
                     />
                   </div>
 
-                  {/* Category Pills */}
-                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
-                    {productCategories.slice(0, 5).map(cat => (
-                      <button
-                        key={cat}
-                        onClick={() => setBillingCategoryFilter(cat)}
-                        className={`px-2.5 py-1.5 rounded-lg whitespace-nowrap font-medium transition ${
-                          billingCategoryFilter === cat
-                            ? 'bg-blue-600 text-white shadow-sm'
-                            : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200'
-                        }`}
-                      >
-                        {cat}
-                      </button>
-                    ))}
-                  </div>
+                  <button
+                    onClick={() => setShowBarcodeModal(true)}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl transition shrink-0"
+                  >
+                    <QrCode className="h-3.5 w-3.5 text-blue-600" />
+                    Barcode Scan
+                  </button>
                 </div>
 
-                {/* Product Grid (One-tap add to current bill) */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-80 overflow-y-auto pr-1">
+                {/* Category Pills */}
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
+                  {productCategories.map(cat => (
+                    <button
+                      key={cat}
+                      onClick={() => setBillingCategoryFilter(cat)}
+                      className={`px-3 py-1.5 rounded-lg whitespace-nowrap font-medium transition ${
+                        billingCategoryFilter === cat
+                          ? 'bg-blue-600 text-white shadow-sm'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Visual Product Grid with High-Resolution Photos */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3.5 max-h-[440px] overflow-y-auto pr-1">
                   {products
                     .filter(p => {
                       const matchSearch = (p.name || '').toLowerCase().includes(billingProductSearch.toLowerCase()) ||
@@ -1108,43 +1258,72 @@ export default function VendorDashboard() {
                       return matchSearch && matchCat;
                     })
                     .map(product => (
-                      <button
+                      <div
                         key={product._id}
-                        onClick={() => {
-                          addItemToCart(product);
-                          if (soundEnabled) playScanBeep();
-                        }}
-                        className="text-left p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-blue-500 dark:hover:border-blue-500 bg-slate-50/50 dark:bg-slate-800/30 hover:bg-white dark:hover:bg-slate-800 transition flex flex-col justify-between group shadow-xs"
+                        className="group relative flex flex-col justify-between p-3 rounded-2xl border border-slate-200 dark:border-slate-800 hover:border-blue-500 dark:hover:border-blue-500 bg-white dark:bg-slate-800/40 hover:shadow-md transition-all duration-200 text-left overflow-hidden"
                       >
-                        <div>
-                          <div className="font-semibold text-xs text-slate-800 dark:text-slate-200 line-clamp-1 group-hover:text-blue-600">
-                            {product.name}
-                          </div>
-                          <div className="text-[10px] text-slate-400 mt-0.5">
-                            SKU: {product.sku || 'N/A'} • {product.unit || 'pcs'}
-                          </div>
-                        </div>
-
-                        <div className="mt-3 flex items-center justify-between">
-                          <span className="font-bold text-xs text-slate-900 dark:text-white">
-                            ₹{product.price}
+                        {/* Product Photo Thumbnail */}
+                        <div className="w-full h-28 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 mb-2 relative flex items-center justify-center">
+                          {product.image ? (
+                            <img 
+                              src={product.image} 
+                              alt={product.name} 
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                              loading="lazy"
+                              onError={(e) => { e.target.style.display = 'none'; }}
+                            />
+                          ) : (
+                            <Package className="h-8 w-8 text-slate-400" />
+                          )}
+                          <span className="absolute top-1.5 left-1.5 px-2 py-0.5 rounded-md text-[9px] font-bold bg-white/90 dark:bg-slate-900/90 text-slate-700 dark:text-slate-300 backdrop-blur-xs shadow-2xs">
+                            {product.category || 'Grocery'}
                           </span>
-                          <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${
+                          <span className={`absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded text-[9px] font-bold ${
                             product.stock <= (product.lowStockAlertLimit || 10)
-                              ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
-                              : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+                              ? 'bg-amber-500 text-white shadow-2xs'
+                              : 'bg-emerald-600 text-white shadow-2xs'
                           }`}>
                             {product.stock} {product.unit}
                           </span>
                         </div>
-                      </button>
+
+                        {/* Title & SKU */}
+                        <div className="flex-1 flex flex-col justify-between">
+                          <div>
+                            <h4 className="font-semibold text-xs text-slate-900 dark:text-white line-clamp-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                              {product.name}
+                            </h4>
+                            <div className="text-[10px] text-slate-400 mt-0.5">
+                              SKU: {product.sku || 'N/A'}
+                            </div>
+                          </div>
+
+                          {/* Price & Action */}
+                          <div className="mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                            <span className="font-black text-sm text-slate-900 dark:text-white">
+                              ₹{product.price}
+                              <span className="text-[10px] font-normal text-slate-500">/{product.unit}</span>
+                            </span>
+
+                            <button
+                              onClick={() => {
+                                addItemToCart(product);
+                                if (soundEnabled) playScanBeep();
+                              }}
+                              className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 hover:bg-blue-600 hover:text-white transition-all shadow-2xs"
+                            >
+                              + Add
+                            </button>
+                          </div>
+                        </div>
+                      </div>
                     ))}
                 </div>
               </div>
 
             </div>
 
-            {/* Right 5 Cols: Register Tape & Current Bill Cart */}
+            {/* Right 5 Cols: Visual Register Tape & Current Bill Cart */}
             <div className="lg:col-span-5 space-y-4">
               <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm flex flex-col justify-between">
                 
@@ -1158,15 +1337,26 @@ export default function VendorDashboard() {
                     </span>
                   </div>
 
-                  {cartItems.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    {/* One-Click Grocery Sample Filler */}
                     <button
-                      onClick={handleClearCart}
-                      className="text-xs text-slate-400 hover:text-red-600 transition"
-                      title="Clear Cart"
+                      onClick={handleLoadQuickGroceryCart}
+                      className="px-2 py-1 text-[11px] font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 rounded-lg transition"
+                      title="Load sample grocery cart with pictures"
                     >
-                      Clear All
+                      ✨ Quick Fill Cart
                     </button>
-                  )}
+
+                    {cartItems.length > 0 && (
+                      <button
+                        onClick={handleClearCart}
+                        className="text-xs text-slate-400 hover:text-red-600 transition"
+                        title="Clear Cart"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {/* Customer Details Strip */}
@@ -1208,29 +1398,46 @@ export default function VendorDashboard() {
                   </div>
                 </div>
 
-                {/* Items List */}
-                <div className="py-3 space-y-2 max-h-64 overflow-y-auto">
+                {/* Items List with Product Photos & Prices */}
+                <div className="py-3 space-y-2.5 max-h-72 overflow-y-auto">
                   {cartItems.length === 0 ? (
                     <div className="text-center py-10 text-slate-400 text-xs">
-                      <ShoppingCart className="h-8 w-8 mx-auto mb-2 stroke-1 opacity-40" />
+                      <ShoppingBag className="h-9 w-9 mx-auto mb-2 stroke-1 opacity-40" />
                       <div>Your bill is currently empty.</div>
-                      <div className="text-[11px] text-slate-400 mt-0.5">Use mic or tap products to add items.</div>
+                      <div className="text-[11px] text-slate-400 mt-1">
+                        Use mic, tap items, or click <strong className="text-emerald-600">Quick Fill Cart</strong> above!
+                      </div>
                     </div>
                   ) : (
                     cartItems.map((item, idx) => (
                       <div
                         key={idx}
-                        className="flex items-center justify-between p-2 rounded-xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 text-xs"
+                        className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 text-xs"
                       >
-                        <div className="flex-1 pr-2">
-                          <div className="font-semibold text-slate-800 dark:text-slate-200 line-clamp-1">{item.name}</div>
-                          <div className="text-[10px] text-slate-500">
-                            ₹{item.price}/{item.unit} • Tax {item.taxRate || 5}%
+                        {/* Thumbnail Picture + Description */}
+                        <div className="flex items-center gap-2.5 flex-1 pr-2">
+                          <div className="w-10 h-10 rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-800 shrink-0 border border-slate-200 dark:border-slate-700 flex items-center justify-center">
+                            {item.image ? (
+                              <img 
+                                src={item.image} 
+                                alt={item.name} 
+                                className="w-full h-full object-cover" 
+                                onError={(e) => { e.target.style.display = 'none'; }} 
+                              />
+                            ) : (
+                              <Package className="h-5 w-5 text-slate-400" />
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="font-semibold text-slate-800 dark:text-slate-200 truncate">{item.name}</div>
+                            <div className="text-[10px] text-slate-500">
+                              ₹{item.price}/{item.unit || 'pcs'} • Tax {item.taxRate || 5}%
+                            </div>
                           </div>
                         </div>
 
-                        {/* Qty +/- Controls */}
-                        <div className="flex items-center gap-1.5">
+                        {/* Qty Controls */}
+                        <div className="flex items-center gap-1.5 shrink-0">
                           <button
                             onClick={() => handleUpdateCartQty(item.productId || item.name, item.quantity - 1)}
                             className="w-5 h-5 rounded bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 flex items-center justify-center font-bold hover:bg-slate-100"
@@ -1249,7 +1456,7 @@ export default function VendorDashboard() {
                         </div>
 
                         {/* Item Total & Remove */}
-                        <div className="text-right pl-3">
+                        <div className="text-right pl-3 shrink-0">
                           <div className="font-bold text-slate-900 dark:text-white">
                             ₹{item.lineTotal.toFixed(2)}
                           </div>
@@ -1304,7 +1511,7 @@ export default function VendorDashboard() {
                         onClick={() => setPaymentMethod(method)}
                         className={`py-1.5 rounded-lg font-medium text-center transition ${
                           paymentMethod === method
-                            ? 'bg-blue-600 text-white shadow-xs'
+                            ? 'bg-blue-600 text-white shadow-2xs'
                             : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200'
                         }`}
                       >
@@ -1581,7 +1788,7 @@ export default function VendorDashboard() {
                     setEditingProduct(null);
                     setProductForm({
                       name: '', sku: '', barcode: '', category: 'General', unit: 'piece',
-                      price: '', costPrice: '', taxRate: 5, stock: '', lowStockAlertLimit: 10, status: 'Active'
+                      price: '', costPrice: '', taxRate: 5, stock: '', lowStockAlertLimit: 10, status: 'Active', image: ''
                     });
                     setShowProductModal(true);
                   }}
@@ -1593,13 +1800,13 @@ export default function VendorDashboard() {
               </div>
             </div>
 
-            {/* Products Table */}
+            {/* Products Table with Photos */}
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead>
                     <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-400 uppercase text-[10px] tracking-wider bg-slate-50/70 dark:bg-slate-800/40">
-                      <th className="py-3 px-4">Product Name</th>
+                      <th className="py-3 px-4">Item</th>
                       <th className="py-3 px-3">SKU / Code</th>
                       <th className="py-3 px-3">Category</th>
                       <th className="py-3 px-3 text-right">Selling Price</th>
@@ -1623,16 +1830,27 @@ export default function VendorDashboard() {
 
                         return (
                           <tr key={p._id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                            <td className="py-3.5 px-4">
-                              <div className="font-semibold text-slate-900 dark:text-white">{p.name}</div>
-                              {p.barcode && <div className="text-[10px] text-slate-400 font-mono">Barcode: {p.barcode}</div>}
+                            <td className="py-3 px-4">
+                              <div className="flex items-center gap-3">
+                                <div className="w-9 h-9 rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shrink-0 flex items-center justify-center">
+                                  {p.image ? (
+                                    <img src={p.image} alt={p.name} className="w-full h-full object-cover" onError={(e) => { e.target.style.display = 'none'; }} />
+                                  ) : (
+                                    <Package className="h-4 w-4 text-slate-400" />
+                                  )}
+                                </div>
+                                <div>
+                                  <div className="font-semibold text-slate-900 dark:text-white">{p.name}</div>
+                                  {p.barcode && <div className="text-[10px] text-slate-400 font-mono">Barcode: {p.barcode}</div>}
+                                </div>
+                              </div>
                             </td>
-                            <td className="py-3.5 px-3 font-mono text-[11px] text-slate-600 dark:text-slate-400">{p.sku || 'N/A'}</td>
-                            <td className="py-3.5 px-3 text-slate-600 dark:text-slate-300">{p.category || 'General'}</td>
-                            <td className="py-3.5 px-3 text-right font-bold text-slate-900 dark:text-white">₹{Number(p.price).toFixed(2)}</td>
-                            <td className="py-3.5 px-3 text-right text-slate-500">₹{Number(p.costPrice || 0).toFixed(2)}</td>
-                            <td className="py-3.5 px-3 text-right text-slate-600">{p.taxRate || 0}%</td>
-                            <td className="py-3.5 px-3 text-center">
+                            <td className="py-3 px-3 font-mono text-[11px] text-slate-600 dark:text-slate-400">{p.sku || 'N/A'}</td>
+                            <td className="py-3 px-3 text-slate-600 dark:text-slate-300">{p.category || 'General'}</td>
+                            <td className="py-3 px-3 text-right font-bold text-slate-900 dark:text-white">₹{Number(p.price).toFixed(2)}</td>
+                            <td className="py-3 px-3 text-right text-slate-500">₹{Number(p.costPrice || 0).toFixed(2)}</td>
+                            <td className="py-3 px-3 text-right text-slate-600">{p.taxRate || 0}%</td>
+                            <td className="py-3 px-3 text-center">
                               <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
                                 isOut
                                   ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
@@ -1643,7 +1861,7 @@ export default function VendorDashboard() {
                                 {p.stock} {p.unit || 'pcs'}
                               </span>
                             </td>
-                            <td className="py-3.5 px-4 text-right space-x-2">
+                            <td className="py-3 px-4 text-right space-x-2">
                               <button
                                 onClick={() => {
                                   setStockAdjustItem(p);
@@ -1668,7 +1886,8 @@ export default function VendorDashboard() {
                                     taxRate: p.taxRate !== undefined ? p.taxRate : 5,
                                     stock: p.stock,
                                     lowStockAlertLimit: p.lowStockAlertLimit || 10,
-                                    status: p.status || 'Active'
+                                    status: p.status || 'Active',
+                                    image: p.image || ''
                                   });
                                   setShowProductModal(true);
                                 }}
@@ -2016,7 +2235,104 @@ export default function VendorDashboard() {
           MODALS & OVERLAYS
       ========================================================================= */}
 
-      {/* 1. RECEIPT PREVIEW MODAL */}
+      {/* BARCODE SCANNER MODAL */}
+      {showBarcodeModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-2xl space-y-4">
+            <div className="flex justify-between items-center pb-2 border-b border-slate-100 dark:border-slate-800">
+              <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+                <QrCode className="h-4 w-4 text-blue-600" />
+                Barcode Scanner & Quick Lookup
+              </h3>
+              <button onClick={() => setShowBarcodeModal(false)} className="text-slate-400 hover:text-slate-600">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">
+                  Scan Barcode or Type Code:
+                </label>
+                <input
+                  type="text"
+                  autoFocus
+                  placeholder="e.g. 890103001015 (Maggi) or 890103001013 (Amul Butter)"
+                  value={barcodeInput}
+                  onChange={(e) => setBarcodeInput(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-mono text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
+                />
+              </div>
+
+              {/* Quick Sample Barcodes */}
+              <div>
+                <span className="text-[10px] text-slate-400 block mb-1">Tap a sample grocery barcode to test:</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    { code: '890103001015', name: 'Maggi' },
+                    { code: '890103001013', name: 'Amul Butter' },
+                    { code: '890103001006', name: 'Fortune Oil' },
+                    { code: '890103001009', name: 'Tata Salt' },
+                    { code: '890103001017', name: 'Good Day' }
+                  ].map(b => (
+                    <button
+                      key={b.code}
+                      onClick={() => setBarcodeInput(b.code)}
+                      className="px-2 py-1 rounded bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-[10px] font-mono"
+                    >
+                      {b.name} ({b.code.slice(-4)})
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Matched Product Preview */}
+              {barcodeInput && (
+                (() => {
+                  const match = products.find(p => p.barcode === barcodeInput.trim() || (p.sku || '').toLowerCase() === barcodeInput.trim().toLowerCase());
+                  if (!match) {
+                    return <div className="p-3 text-center text-slate-400 rounded-xl bg-slate-50 dark:bg-slate-800">No product found for barcode: {barcodeInput}</div>;
+                  }
+
+                  return (
+                    <div className="p-3.5 rounded-xl border border-blue-200 dark:border-blue-900/40 bg-blue-50/50 dark:bg-blue-950/20 flex items-center justify-between gap-3 animate-fade-in">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-lg overflow-hidden bg-white shrink-0 border border-slate-200">
+                          {match.image ? (
+                            <img src={match.image} alt={match.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <Package className="h-6 w-6 text-slate-400 m-auto mt-3" />
+                          )}
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-slate-900 dark:text-white">{match.name}</h4>
+                          <div className="text-[10px] text-slate-500 font-mono">Barcode: {match.barcode} • Stock: {match.stock} {match.unit}</div>
+                          <div className="font-extrabold text-blue-600 dark:text-blue-400 text-sm mt-0.5">₹{match.price}</div>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          addItemToCart(match);
+                          if (soundEnabled) playScanBeep();
+                          addToast(`Scanned and added ${match.name}!`, 'success');
+                          setShowBarcodeModal(false);
+                          setBarcodeInput('');
+                        }}
+                        className="px-3.5 py-2 bg-blue-600 text-white font-bold rounded-xl text-xs hover:bg-blue-700 shadow-sm shrink-0"
+                      >
+                        + Add to Bill
+                      </button>
+                    </div>
+                  );
+                })()
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* RECEIPT PREVIEW MODAL */}
       {receiptInvoice && (
         <ThermalReceipt
           invoice={receiptInvoice}
@@ -2030,7 +2346,7 @@ export default function VendorDashboard() {
         />
       )}
 
-      {/* 2. AMBIGUITY / CLARIFICATION MODAL */}
+      {/* AMBIGUITY / CLARIFICATION MODAL */}
       {showClarificationModal && clarifications.length > 0 && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
           <div className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-2xl space-y-4">
@@ -2065,7 +2381,10 @@ export default function VendorDashboard() {
                           }}
                           className="w-full p-2 text-left rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-blue-500 flex justify-between items-center transition"
                         >
-                          <span className="font-medium text-slate-900 dark:text-white">{opt.name}</span>
+                          <div className="flex items-center gap-2">
+                            {opt.image && <img src={opt.image} alt={opt.name} className="w-7 h-7 rounded object-cover" />}
+                            <span className="font-medium text-slate-900 dark:text-white">{opt.name}</span>
+                          </div>
                           <span className="font-bold text-blue-600">₹{opt.price}</span>
                         </button>
                       ))}
@@ -2109,7 +2428,7 @@ export default function VendorDashboard() {
         </div>
       )}
 
-      {/* 3. ADD / EDIT PRODUCT MODAL */}
+      {/* ADD / EDIT PRODUCT MODAL */}
       {showProductModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in overflow-y-auto">
           <div className="w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-2xl space-y-4 my-auto">
@@ -2132,6 +2451,17 @@ export default function VendorDashboard() {
                   value={productForm.name}
                   onChange={(e) => setProductForm(prev => ({ ...prev, name: e.target.value }))}
                   className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Product Image URL</label>
+                <input
+                  type="url"
+                  placeholder="https://images.unsplash.com/... or CDN link"
+                  value={productForm.image}
+                  onChange={(e) => setProductForm(prev => ({ ...prev, image: e.target.value }))}
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none"
                 />
               </div>
 
@@ -2163,7 +2493,7 @@ export default function VendorDashboard() {
                   <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Category</label>
                   <input
                     type="text"
-                    placeholder="e.g. Grains, Snacks"
+                    placeholder="e.g. Grains, Snacks, Dairy"
                     value={productForm.category}
                     onChange={(e) => setProductForm(prev => ({ ...prev, category: e.target.value }))}
                     className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none"
@@ -2183,6 +2513,8 @@ export default function VendorDashboard() {
                     <option value="bottle">bottle (Bottle)</option>
                     <option value="strip">strip (Medicine Strip)</option>
                     <option value="litre">litre (Litre)</option>
+                    <option value="tin">tin (Tin)</option>
+                    <option value="jar">jar (Jar)</option>
                   </select>
                 </div>
               </div>
@@ -2220,8 +2552,8 @@ export default function VendorDashboard() {
                   >
                     <option value="0">0% (Exempt)</option>
                     <option value="5">5% (Grains / Food)</option>
-                    <option value="12">12% (Packaged / Stationery)</option>
-                    <option value="18">18% (Standard Retail)</option>
+                    <option value="12">12% (Packaged / Dairy)</option>
+                    <option value="18">18% (Standard Retail / Hygiene)</option>
                     <option value="28">28% (Beverages / Luxury)</option>
                   </select>
                 </div>
@@ -2239,7 +2571,7 @@ export default function VendorDashboard() {
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Low Stock Alert Limit</label>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Low Stock Limit</label>
                   <input
                     type="number"
                     placeholder="10"
@@ -2270,7 +2602,7 @@ export default function VendorDashboard() {
         </div>
       )}
 
-      {/* 4. STOCK ADJUST MODAL */}
+      {/* STOCK ADJUST MODAL */}
       {showStockAdjustModal && stockAdjustItem && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
           <div className="w-full max-w-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-2xl space-y-4">
@@ -2323,18 +2655,18 @@ export default function VendorDashboard() {
         </div>
       )}
 
-      {/* 5. BULK CSV IMPORT MODAL */}
+      {/* BULK CSV IMPORT MODAL */}
       {showBulkImportModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
           <div className="w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-2xl space-y-4">
             <h3 className="font-bold text-sm text-slate-900 dark:text-white">Bulk CSV Product Import</h3>
-            <p className="text-xs text-slate-500">Paste CSV data below. Column format: <br/><code className="text-blue-600">Name, SKU, Barcode, Category, Price, Unit, Stock, TaxRate</code></p>
+            <p className="text-xs text-slate-500">Format: <br/><code className="text-blue-600">Name, SKU, Barcode, Category, Price, Unit, Stock, TaxRate, ImageURL</code></p>
 
             <textarea
               rows={6}
               value={bulkCsvText}
               onChange={(e) => setBulkCsvText(e.target.value)}
-              placeholder="Basmati Rice, GRA-01, 890100, Grains, 60, kg, 100, 5&#10;Sugar, GRA-02, 890101, Grains, 40, kg, 50, 5"
+              placeholder="Basmati Rice, GRA-01, 890100, Grains, 60, kg, 100, 5, https://...&#10;Sugar, GRA-02, 890101, Grains, 40, kg, 50, 5, https://..."
               className="w-full p-3 font-mono text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none"
             />
 
@@ -2356,7 +2688,7 @@ export default function VendorDashboard() {
         </div>
       )}
 
-      {/* 6. ADD CUSTOMER MODAL */}
+      {/* ADD CUSTOMER MODAL */}
       {showAddCustomerModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
           <div className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-2xl space-y-4">
@@ -2427,7 +2759,7 @@ export default function VendorDashboard() {
         </div>
       )}
 
-      {/* 7. CUSTOMER LEDGER MODAL */}
+      {/* CUSTOMER LEDGER MODAL */}
       {selectedLedgerCustomer && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
           <div className="w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-2xl space-y-4">
@@ -2482,7 +2814,7 @@ export default function VendorDashboard() {
         </div>
       )}
 
-      {/* 8. RECORD UDHAAR PAYMENT MODAL */}
+      {/* RECORD UDHAAR PAYMENT MODAL */}
       {showPayUdhaarModal && payUdhaarCustomer && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
           <div className="w-full max-w-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-2xl space-y-4">
@@ -2535,7 +2867,7 @@ export default function VendorDashboard() {
         </div>
       )}
 
-      {/* 9. RECORD SUBSEQUENT INVOICE PAYMENT MODAL */}
+      {/* RECORD SUBSEQUENT INVOICE PAYMENT MODAL */}
       {showSubsequentPayModal && subsequentPayOrder && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
           <div className="w-full max-w-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-2xl space-y-4">
@@ -2588,7 +2920,7 @@ export default function VendorDashboard() {
         </div>
       )}
 
-      {/* TOAST NOTIFICATION CONTAINER */}
+      {/* TOAST CONTAINER */}
       <div className="fixed bottom-5 right-5 z-50 space-y-2 pointer-events-none">
         {toasts.map(toast => (
           <div

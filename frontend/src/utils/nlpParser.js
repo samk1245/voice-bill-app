@@ -1,5 +1,6 @@
 // Multilingual AI Voice Command & Billing Parser for VoiceBill AI
 // Supports Hindi, English, Hinglish, offline processing, multi-item extraction,
+// grocery aliases (cheeni, chawal, atta, namak, tel, doodh, etc.),
 // price/quantity parsing, discounts, GST instructions, quantity edits, and invoice commands.
 
 const numberMap = {
@@ -51,13 +52,72 @@ const unitMap = {
   'piece': 'piece', 'pieces': 'piece', 'pc': 'piece', 'pcs': 'piece',
   'gram': 'g', 'grams': 'g', 'g': 'g', 'gm': 'g', 'gms': 'g',
   'strip': 'strip', 'strips': 'strip',
-  'litre': 'litre', 'litres': 'litre', 'l': 'litre', 'liter': 'litre', 'liters': 'litre'
+  'litre': 'litre', 'litres': 'litre', 'l': 'litre', 'liter': 'litre', 'liters': 'litre',
+  'tin': 'tin', 'tins': 'tin', 'jar': 'jar', 'jars': 'jar'
 };
 
 const parseUnit = (word) => {
   if (!word) return null;
   const normalized = word.toLowerCase().trim();
   return unitMap[normalized] || null;
+};
+
+// Common Indian Kirana & Grocery Synonyms Map
+const groceryAliases = {
+  'chawal': 'rice',
+  'rice': 'rice',
+  'cheeni': 'sugar',
+  'shakkar': 'sugar',
+  'sugar': 'sugar',
+  'atta': 'atta',
+  'aata': 'atta',
+  'namak': 'salt',
+  'salt': 'salt',
+  'toor dal': 'toor dal',
+  'arhar': 'toor dal',
+  'arhar dal': 'toor dal',
+  'moong': 'moong dal',
+  'moong dal': 'moong dal',
+  'tel': 'oil',
+  'sarson tel': 'mustard oil',
+  'sunflower oil': 'sunflower oil',
+  'refined oil': 'sunflower oil',
+  'ghee': 'ghee',
+  'makhan': 'butter',
+  'butter': 'butter',
+  'doodh': 'milk',
+  'milk': 'milk',
+  'paneer': 'paneer',
+  'maggi': 'maggi',
+  'noodles': 'maggi',
+  'biscuit': 'biscuit',
+  'biscuits': 'biscuit',
+  'good day': 'good day',
+  'oreo': 'oreo',
+  'chips': 'lays',
+  'lays': 'lays',
+  'kurkure': 'kurkure',
+  'bhujia': 'bhujia',
+  'sev': 'bhujia',
+  'chai': 'tea',
+  'chai patti': 'tea',
+  'tea': 'tea',
+  'coffee': 'nescafe',
+  'coke': 'coke',
+  'frooti': 'frooti',
+  'sabun': 'dettol',
+  'soap': 'dettol',
+  'surf': 'surf excel',
+  'detergent': 'surf excel',
+  'vim': 'vim',
+  'bartan bar': 'vim',
+  'colgate': 'colgate',
+  'paste': 'colgate',
+  'notebook': 'notebook',
+  'copy': 'notebook',
+  'pen': 'pen',
+  'mirch': 'mirch',
+  'haldi': 'haldi'
 };
 
 export const parseVoiceCommand = (rawText, products = [], customers = []) => {
@@ -139,11 +199,8 @@ export const parseVoiceCommand = (rawText, products = [], customers = []) => {
     };
   }
 
-  // 2. TAX / GST COMMANDS (e.g., "Add 18 percent GST to eligible products", "Apply 5 percent tax")
-  if (
-    queryText.includes('gst') ||
-    queryText.includes('tax')
-  ) {
+  // 2. TAX / GST COMMANDS
+  if (queryText.includes('gst') || queryText.includes('tax')) {
     const taxMatch = queryText.match(/(\d+)\s*(?:percent|%|pratishat)?\s*(?:gst|tax)/) ||
                      queryText.match(/(?:gst|tax)\s*(?:of|at)?\s*(\d+)/);
     if (taxMatch) {
@@ -156,7 +213,7 @@ export const parseVoiceCommand = (rawText, products = [], customers = []) => {
     }
   }
 
-  // 3. DISCOUNT COMMANDS (e.g., "Apply a 5 percent discount", "10 rupaye discount laga do", "Discount 50 rupees")
+  // 3. DISCOUNT COMMANDS
   if (queryText.includes('discount') || queryText.includes('chhoot')) {
     const percentMatch = queryText.match(/(\d+)\s*(?:percent|%)\s*(?:discount|chhoot)/);
     if (percentMatch) {
@@ -180,7 +237,7 @@ export const parseVoiceCommand = (rawText, products = [], customers = []) => {
     }
   }
 
-  // 4. ITEM REMOVAL COMMANDS (e.g., "Remove the notebook", "chawal hata do", "delete maggi")
+  // 4. ITEM REMOVAL COMMANDS
   if (
     queryText.includes('remove') ||
     queryText.includes('hata do') ||
@@ -203,7 +260,7 @@ export const parseVoiceCommand = (rawText, products = [], customers = []) => {
     };
   }
 
-  // 5. QUANTITY EDIT COMMANDS (e.g., "Change the quantity of pens to 10", "chawal 3 kilo kar do")
+  // 5. QUANTITY EDIT COMMANDS
   if (
     queryText.includes('change the quantity') ||
     queryText.includes('change quantity') ||
@@ -231,7 +288,7 @@ export const parseVoiceCommand = (rawText, products = [], customers = []) => {
     }
   }
 
-  // 6. UDHAAR / LEDGER COMMANDS (e.g., "Ramesh ke account mein 500 rupaye ka udhaar add karo")
+  // 6. UDHAAR / LEDGER COMMANDS
   if (queryText.includes('udhaar') || queryText.includes('credit')) {
     const amountMatch = queryText.match(/(\d+)\s*(?:rupees|rupaye|rs)?/);
     const amount = amountMatch ? parseInt(amountMatch[1], 10) : 0;
@@ -254,7 +311,6 @@ export const parseVoiceCommand = (rawText, products = [], customers = []) => {
   }
 
   // 7. MULTI-ITEM BILLING PARSER
-  // Split command by "and", "aur", "plus", or comma
   const segments = queryText
     .split(/\s+aur\s+|\s+and\s+|\s+plus\s+|,\s*/)
     .map(s => s.trim())
@@ -264,7 +320,6 @@ export const parseVoiceCommand = (rawText, products = [], customers = []) => {
   const detectedClarifications = [];
   let detectedCustomer = null;
 
-  // Check customer mention across text
   customers.forEach(c => {
     if (queryText.includes(c.name.toLowerCase())) {
       detectedCustomer = { name: c.name, mobile: c.mobile, _id: c._id };
@@ -272,10 +327,8 @@ export const parseVoiceCommand = (rawText, products = [], customers = []) => {
   });
 
   segments.forEach(segment => {
-    // Strip introductory words
     let seg = segment.replace(/^(add|dena|de do|karo|please|daal do)\s+/i, '').trim();
 
-    // Check explicit price: "at 50 rupees each", "at 50 rs", "price 25"
     let explicitPrice = null;
     const priceMatch = seg.match(/(?:at|price|ke bhaav|rate)?\s*(\d+)\s*(?:rupees|rupaye|rs|each|prati)?/i);
     if (seg.includes('at ') || seg.includes('each') || seg.includes('rate') || seg.includes('price')) {
@@ -285,7 +338,6 @@ export const parseVoiceCommand = (rawText, products = [], customers = []) => {
       }
     }
 
-    // Extract quantity and unit
     const words = seg.split(/\s+/);
     let qty = 1;
     let unit = null;
@@ -302,8 +354,13 @@ export const parseVoiceCommand = (rawText, products = [], customers = []) => {
       }
     }
 
-    const searchTarget = remainingWords.join(' ').toLowerCase().trim();
+    let searchTarget = remainingWords.join(' ').toLowerCase().trim();
     if (!searchTarget) return;
+
+    // Check grocery alias
+    if (groceryAliases[searchTarget]) {
+      searchTarget = groceryAliases[searchTarget];
+    }
 
     // Search against products
     const exactMatch = products.find(p => p.name.toLowerCase() === searchTarget);
@@ -321,7 +378,8 @@ export const parseVoiceCommand = (rawText, products = [], customers = []) => {
         quantity: qty,
         unit: unit || exactMatch.unit || 'pcs',
         taxRate: exactMatch.taxRate || 5,
-        stock: exactMatch.stock || 0
+        stock: exactMatch.stock || 0,
+        image: exactMatch.image || ''
       });
     } else if (partialMatches.length === 1) {
       detectedItems.push({
@@ -332,10 +390,10 @@ export const parseVoiceCommand = (rawText, products = [], customers = []) => {
         quantity: qty,
         unit: unit || partialMatches[0].unit || 'pcs',
         taxRate: partialMatches[0].taxRate || 5,
-        stock: partialMatches[0].stock || 0
+        stock: partialMatches[0].stock || 0,
+        image: partialMatches[0].image || ''
       });
     } else if (partialMatches.length > 1) {
-      // Ambiguity: e.g. "Parle-G 50g" vs "Parle-G 100g"
       detectedClarifications.push({
         term: searchTarget,
         quantity: qty,
@@ -343,7 +401,6 @@ export const parseVoiceCommand = (rawText, products = [], customers = []) => {
         options: partialMatches
       });
     } else {
-      // Unrecognized product: Prompt user confirmation rather than inventing prices silently
       detectedClarifications.push({
         term: searchTarget,
         quantity: qty,
@@ -367,6 +424,6 @@ export const parseVoiceCommand = (rawText, products = [], customers = []) => {
   return {
     intent: 'unknown',
     queryText,
-    message: 'Could not understand the command. You can speak products with quantity, e.g. "Add 2 notebooks at 50 rupees each".'
+    message: 'Could not understand the command. You can speak products with quantity, e.g. "2 kilo chawal aur ek packet maggi".'
   };
 };
