@@ -161,3 +161,6 @@ export const MockStore = new MockModel('stores');
 export const MockProduct = new MockModel('products');
 export const MockOrder = new MockModel('orders');
 export const MockCustomer = new MockModel('customers');
+export const MockExpense = new MockModel('expenses');
+export const MockSupplier = new MockModel('suppliers');
+export const MockQuotation = new MockModel('quotations');

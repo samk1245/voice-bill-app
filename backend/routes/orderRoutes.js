@@ -1,5 +1,5 @@
 import express from 'express';
-import { Order, Product, Customer, Store } from '../models/index.js';
+import { Order, Product, Customer, Store, Expense } from '../models/index.js';
 import { authenticate } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
@@ -64,6 +64,7 @@ router.get('/analytics/:storeId', authenticate, async (req, res) => {
     const orders = await Order.find({ storeId });
     const customers = await Customer.find({ storeId });
     const products = await Product.find({ storeId });
+    const expenses = await Expense.find({ storeId });
 
     const now = new Date();
     const todayStr = now.toISOString().slice(0, 10);
@@ -164,6 +165,16 @@ router.get('/analytics/:storeId', authenticate, async (req, res) => {
     // Outstanding Udhaar from customer ledger
     const outstandingUdhaar = customers.reduce((sum, c) => sum + Number(c.pendingCredit || 0), 0);
 
+    let totalExpenses = 0;
+    const expenseBreakdown = {};
+    expenses.forEach(e => {
+      const amt = Number(e.amount || 0);
+      totalExpenses += amt;
+      const cat = e.category || 'Other';
+      expenseBreakdown[cat] = round2((expenseBreakdown[cat] || 0) + amt);
+    });
+    const estimatedProfit = round2(monthSales - totalExpenses);
+
     // Low stock items count
     const lowStockCount = products.filter(p => Number(p.stock || 0) <= Number(p.lowStockAlertLimit || 10)).length;
 
@@ -189,7 +200,10 @@ router.get('/analytics/:storeId', authenticate, async (req, res) => {
       },
       salesTrends: Object.values(dailyMap),
       topProducts,
-      recentBills
+      recentBills,
+      totalExpenses: round2(totalExpenses),
+      estimatedProfit,
+      expenseBreakdown
     });
   } catch (err) {
     console.error('Analytics aggregation error:', err);

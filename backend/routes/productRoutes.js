@@ -73,7 +73,11 @@ router.post('/add', authenticate, async (req, res) => {
       stock,
       lowStockAlertLimit,
       status,
-      image
+      image,
+      isService,
+      batchNumber,
+      expiryDate,
+      variants
     } = req.body;
 
     if (!storeId || !name || price === undefined) {
@@ -100,6 +104,10 @@ router.post('/add', authenticate, async (req, res) => {
       lowStockAlertLimit: Number(lowStockAlertLimit || 10),
       status: status || 'Active',
       image: image || '',
+      isService: Boolean(isService),
+      batchNumber: batchNumber || '',
+      expiryDate: expiryDate || '',
+      variants: Array.isArray(variants) ? variants : [],
       stockHistory: [
         {
           date: new Date().toISOString(),
@@ -133,7 +141,11 @@ router.put('/:id', authenticate, async (req, res) => {
       stock,
       lowStockAlertLimit,
       status,
-      image
+      image,
+      isService,
+      batchNumber,
+      expiryDate,
+      variants
     } = req.body;
 
     const product = await Product.findById(req.params.id);
@@ -155,7 +167,11 @@ router.put('/:id', authenticate, async (req, res) => {
         stock: stock !== undefined ? Number(stock) : product.stock,
         lowStockAlertLimit: lowStockAlertLimit !== undefined ? Number(lowStockAlertLimit) : product.lowStockAlertLimit,
         status: status !== undefined ? status : (product.status || 'Active'),
-        image: image !== undefined ? image : product.image
+        image: image !== undefined ? image : product.image,
+        isService: isService !== undefined ? Boolean(isService) : Boolean(product.isService),
+        batchNumber: batchNumber !== undefined ? batchNumber : (product.batchNumber || ''),
+        expiryDate: expiryDate !== undefined ? expiryDate : (product.expiryDate || ''),
+        variants: variants !== undefined ? variants : (product.variants || [])
       },
       { new: true }
     );

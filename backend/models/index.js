@@ -5,7 +5,7 @@ import StoreMongoose from './Store.js';
 import ProductMongoose from './Product.js';
 import OrderMongoose from './Order.js';
 
-import { MockUser, MockStore, MockProduct, MockOrder, MockCustomer } from '../config/db_fallback.js';
+import { MockUser, MockStore, MockProduct, MockOrder, MockCustomer, MockExpense, MockSupplier, MockQuotation } from '../config/db_fallback.js';
 
 dotenv.config();
 
@@ -16,6 +16,9 @@ let StoreExport = MockStore;
 let ProductExport = MockProduct;
 let OrderExport = MockOrder;
 let CustomerExport = MockCustomer;
+let ExpenseExport = MockExpense;
+let SupplierExport = MockSupplier;
+let QuotationExport = MockQuotation;
 let fallback = true;
 
 if (useMongoose) {
@@ -32,6 +35,9 @@ export const Store = StoreExport;
 export const Product = ProductExport;
 export const Order = OrderExport;
 export const Customer = CustomerExport;
+export const Expense = ExpenseExport;
+export const Supplier = SupplierExport;
+export const Quotation = QuotationExport;
 export const isFallbackMode = fallback;
 
 export const comparePasswords = async (inputPassword, hashedPassword) => {

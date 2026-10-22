@@ -10,6 +10,8 @@ import productRoutes from './routes/productRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
 import paymentRoutes from './routes/paymentRoutes.js';
 import nlpRoutes from './routes/nlpRoutes.js';
+import customerRoutes from './routes/customerRoutes.js';
+import expenseRoutes from './routes/expenseRoutes.js';
 
 dotenv.config();
 
@@ -44,6 +46,8 @@ app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/nlp', nlpRoutes);
+app.use('/api/customers', customerRoutes);
+app.use('/api/expenses', expenseRoutes);
 
 // Mock image asset route (for simulating local uploads in Sandbox mode)
 app.get('/uploads/:filename', (req, res) => {

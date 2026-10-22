@@ -17,6 +17,16 @@
       "role": "Cashier",
       "mobile": "9812345670",
       "createdAt": "2026-08-23T12:00:00.000Z"
+    },
+    {
+      "_id": "user_80ae2uqje",
+      "name": "Gupta Ji",
+      "email": "7565858655@voicebill.com",
+      "mobile": "7565858655",
+      "role": "Owner",
+      "password": "$2a$10$E3DzTMlEDOHF5jdwQbYtiunBp9ofqKwmkoJoYV/vvqllpeuXYlbMW",
+      "createdAt": "2026-10-19T12:17:50.125Z",
+      "updatedAt": "2026-10-19T12:17:50.125Z"
     }
   ],
   "stores": [
@@ -53,6 +63,19 @@
       "stateCode": "07",
       "createdAt": "2026-08-23T12:00:00.000Z",
       "updatedAt": "2026-08-23T12:00:00.000Z"
+    },
+    {
+      "_id": "stor_m3vx82s8w",
+      "name": "r",
+      "slug": "r",
+      "ownerId": "user_80ae2uqje",
+      "category": "Kirana/Grocery",
+      "address": "tewtewtwetewtewtw",
+      "gstNumber": "ETWETWETWET",
+      "preferredLanguage": "Hinglish",
+      "upiId": "tewtewtewtew",
+      "createdAt": "2026-10-19T12:17:55.862Z",
+      "updatedAt": "2026-10-19T12:17:55.862Z"
     }
   ],
   "products": [
@@ -771,6 +794,182 @@
       "paymentStatus": "Paid",
       "status": "Completed",
       "createdAt": "2026-08-23T09:15:00.000Z"
+    },
+    {
+      "_id": "orde_ogtr4vmxx",
+      "storeId": "stor_m3vx82s8w",
+      "invoiceNumber": "VB-1001",
+      "customerName": "Ramesh Kumar",
+      "customerMobile": "9876543210",
+      "customerAddress": "B-42, Sector 4, Rohini, New Delhi",
+      "customerGstin": "07AAACR1234D1Z2",
+      "items": [
+        {
+          "productId": "quick_GRA-RIC-001",
+          "sku": "GRA-RIC-001",
+          "name": "Basmati Rice (Chawal)",
+          "price": 60,
+          "quantity": 2,
+          "unit": "kg",
+          "discount": 0,
+          "taxRate": 5,
+          "taxAmount": 6,
+          "lineTotal": 126,
+          "image": "https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=300&q=80"
+        },
+        {
+          "productId": "quick_GRA-AAT-003",
+          "sku": "GRA-AAT-003",
+          "name": "Aashirvaad Shudh Chakki Atta 5kg",
+          "price": 235,
+          "quantity": 1,
+          "unit": "packet",
+          "discount": 0,
+          "taxRate": 5,
+          "taxAmount": 11.75,
+          "lineTotal": 246.75,
+          "image": "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=300&q=80"
+        },
+        {
+          "productId": "quick_GRO-SAL-009",
+          "sku": "GRO-SAL-009",
+          "name": "Tata Salt Vacuum Evaporated 1kg",
+          "price": 28,
+          "quantity": 1,
+          "unit": "packet",
+          "discount": 0,
+          "taxRate": 0,
+          "taxAmount": 0,
+          "lineTotal": 28,
+          "image": "https://images.unsplash.com/photo-1615485290382-441e4d049cb5?auto=format&fit=crop&w=300&q=80"
+        },
+        {
+          "productId": "quick_SNK-MAG-015",
+          "sku": "SNK-MAG-015",
+          "name": "Maggi 2-Minute Masala Noodles 70g",
+          "price": 14,
+          "quantity": 3,
+          "unit": "packet",
+          "discount": 0,
+          "taxRate": 12,
+          "taxAmount": 5.04,
+          "lineTotal": 47.04,
+          "image": "https://images.unsplash.com/photo-1612927601601-6638404737ce?auto=format&fit=crop&w=300&q=80"
+        },
+        {
+          "productId": "quick_DAI-BUT-013",
+          "sku": "DAI-BUT-013",
+          "name": "Amul Butter Pasteurized 100g",
+          "price": 58,
+          "quantity": 1,
+          "unit": "packet",
+          "discount": 0,
+          "taxRate": 12,
+          "taxAmount": 6.96,
+          "lineTotal": 64.96,
+          "image": "https://images.unsplash.com/photo-1589985270826-4b7bb135bc9d?auto=format&fit=crop&w=300&q=80"
+        },
+        {
+          "productId": "quick_SNK-GUD-017",
+          "sku": "SNK-GUD-017",
+          "name": "Britannia Good Day Butter Cookies 120g",
+          "price": 30,
+          "quantity": 2,
+          "unit": "packet",
+          "discount": 0,
+          "taxRate": 5,
+          "taxAmount": 3,
+          "lineTotal": 63,
+          "image": "https://images.unsplash.com/photo-1558961363-fa8fdf82db35?auto=format&fit=crop&w=300&q=80"
+        }
+      ],
+      "subtotal": 543,
+      "discount": 0,
+      "tax": 32.75,
+      "taxBreakdown": {
+        "cgst": 16.38,
+        "sgst": 16.38,
+        "igst": 0
+      },
+      "totalAmount": 575.75,
+      "amountPaid": 575.75,
+      "balanceDue": 0,
+      "paymentMethod": "Cash",
+      "paymentStatus": "Paid",
+      "cashReceived": 575.75,
+      "changeReturn": 0,
+      "notes": "",
+      "status": "Completed",
+      "createdAt": "2026-10-19T12:19:08.079Z",
+      "updatedAt": "2026-10-19T12:19:08.079Z"
+    }
+  ],
+  "expenses": [
+    {
+      "_id": "exp_001",
+      "storeId": "store_apna_kirana",
+      "category": "Rent",
+      "amount": 15000,
+      "description": "Shop Monthly Rent - October",
+      "paymentMethod": "Bank Transfer",
+      "date": "2026-10-01T10:00:00.000Z",
+      "reference": "TXN-RENT-OCT",
+      "createdAt": "2026-10-01T10:00:00.000Z"
+    },
+    {
+      "_id": "exp_002",
+      "storeId": "store_apna_kirana",
+      "category": "Utilities",
+      "amount": 3200,
+      "description": "Electricity Bill - BSES Rajdhani",
+      "paymentMethod": "UPI",
+      "date": "2026-10-05T14:30:00.000Z",
+      "reference": "UPI-BSES-7821",
+      "createdAt": "2026-10-05T14:30:00.000Z"
+    },
+    {
+      "_id": "exp_003",
+      "storeId": "store_apna_kirana",
+      "category": "Salaries",
+      "amount": 12000,
+      "description": "Helper & Delivery Boy Salary",
+      "paymentMethod": "Cash",
+      "date": "2026-10-07T11:00:00.000Z",
+      "reference": "VOUCHER-089",
+      "createdAt": "2026-10-07T11:00:00.000Z"
+    },
+    {
+      "_id": "exp_004",
+      "storeId": "store_apna_kirana",
+      "category": "Inventory Purchase",
+      "amount": 8500,
+      "description": "Wholesale Kirana Restock - Grains & Dals",
+      "paymentMethod": "Bank Transfer",
+      "date": "2026-10-10T16:00:00.000Z",
+      "reference": "INV-WS-492",
+      "createdAt": "2026-10-10T16:00:00.000Z"
+    },
+    {
+      "_id": "exp_005",
+      "storeId": "store_apna_kirana",
+      "category": "Transport",
+      "amount": 650,
+      "description": "Auto Rickshaw Cartage for Stock Delivery",
+      "paymentMethod": "Cash",
+      "date": "2026-10-12T12:00:00.000Z",
+      "reference": "PETTY-041",
+      "createdAt": "2026-10-12T12:00:00.000Z"
+    },
+    {
+      "_id": "exp_006",
+      "storeId": "store_apna_kirana",
+      "category": "Maintenance",
+      "amount": 1200,
+      "description": "Deep Freezer AC Servicing & Gas Topup",
+      "paymentMethod": "UPI",
+      "date": "2026-10-15T09:30:00.000Z",
+      "reference": "UPI-COOL-331",
+      "createdAt": "2026-10-15T09:30:00.000Z"
     }
   ]
 }
