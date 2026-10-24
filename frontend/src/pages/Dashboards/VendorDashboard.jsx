@@ -15,6 +15,14 @@ import TopNav from '../../components/TopNav.jsx';
 import TemplateSelectorModal from '../../components/TemplateSelectorModal.jsx';
 import HelpShortcutsModal from '../../components/HelpShortcutsModal.jsx';
 import ThermalReceipt from '../../components/ThermalReceipt.jsx';
+import CameraBarcodeScannerModal from '../../components/CameraBarcodeScannerModal.jsx';
+import CashDrawerReconciliationModal from '../../components/CashDrawerReconciliationModal.jsx';
+import { 
+  exportInvoicesToCSV, 
+  exportProductsToCSV, 
+  exportCustomersToCSV, 
+  exportExpensesToCSV 
+} from '../../utils/csvExporter.js';
 
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -62,6 +70,10 @@ export default function VendorDashboard() {
 
   // Global Search
   const [globalSearch, setGlobalSearch] = useState('');
+  const [currency, setCurrency] = useState('₹');
+  const [voiceLang, setVoiceLang] = useState('hi-IN');
+  const [showCashDrawerModal, setShowCashDrawerModal] = useState(false);
+  const [redeemedPoints, setRedeemedPoints] = useState(0);
 
   // Stores & Shop Data
   const [stores, setStores] = useState([]);
@@ -315,7 +327,7 @@ export default function VendorDashboard() {
       const recognition = new SpeechRecognition();
       recognition.continuous = false;
       recognition.interimResults = true;
-      recognition.lang = selectedStore?.preferredLanguage === 'Hindi' ? 'hi-IN' : 'en-IN';
+      recognition.lang = voiceLang || 'hi-IN';
 
       recognition.onstart = () => {
         setIsRecording(true);
@@ -713,6 +725,16 @@ export default function VendorDashboard() {
     }
   ];
 
+  
+  // Calculate customer's earned loyalty points (1 point per 100 spent)
+  const customerLoyaltyPoints = useMemo(() => {
+    if (!cartCustomerInput.mobile || cartCustomerInput.mobile.trim().length < 10) return 0;
+    const cPhone = cartCustomerInput.mobile.trim();
+    const pastOrders = bills.filter(b => b.customerMobile && b.customerMobile.includes(cPhone) && b.status !== 'Cancelled');
+    const totalSpent = pastOrders.reduce((sum, b) => sum + Number(b.totalAmount || 0), 0);
+    return Math.floor(totalSpent / 100);
+  }, [cartCustomerInput.mobile, bills]);
+
   const handleAddCombo = (combo) => {
     let addedCount = 0;
     combo.items.forEach(cItem => {
@@ -752,7 +774,8 @@ export default function VendorDashboard() {
     subtotal = Math.round(subtotal * 100) / 100;
     totalTax = Math.round(totalTax * 100) / 100;
 
-    const discount = Math.round(Number(overallDiscount || 0) * 100) / 100;
+    const loyaltyDiscount = Math.min(Number(redeemedPoints || 0), subtotal);
+    const discount = Math.round((Number(overallDiscount || 0) + loyaltyDiscount) * 100) / 100;
     const grandTotal = Math.round(Math.max(0, subtotal - discount + totalTax) * 100) / 100;
 
     let paid = amountPaid !== '' ? Number(amountPaid) : null;
@@ -779,7 +802,7 @@ export default function VendorDashboard() {
       changeReturn,
       taxBreakdown
     };
-  }, [cartItems, overallDiscount, amountPaid, paymentMethod, cashReceived, isInterState]);
+  }, [cartItems, overallDiscount, redeemedPoints, amountPaid, paymentMethod, cashReceived, isInterState]);
 
   // Finalize & Save Bill
   const handleFinalizeBill = async (autoPrint = false) => {
@@ -1051,9 +1074,14 @@ export default function VendorDashboard() {
           activeRole={activeRole}
           setActiveRole={setActiveRole}
           onOpenHelpModal={() => setShowHelpModal(true)}
+          onOpenCashDrawerModal={() => setShowCashDrawerModal(true)}
           globalSearch={globalSearch}
           setGlobalSearch={setGlobalSearch}
           onNewBillClick={() => setActiveTab('billing')}
+          currency={currency}
+          setCurrency={setCurrency}
+          voiceLang={voiceLang}
+          setVoiceLang={setVoiceLang}
         />
 
         {/* 3. DYNAMIC CONTENT AREA FOR 15 MODULES */}
@@ -1082,6 +1110,13 @@ export default function VendorDashboard() {
                     title="Refresh data"
                   >
                     <RefreshCw className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => setShowCashDrawerModal(true)}
+                    className="px-3.5 py-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 font-bold text-xs hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition flex items-center gap-1.5 shadow-sm"
+                  >
+                    <Landmark className="h-4 w-4 text-emerald-600" />
+                    <span>Day-End Closing (Z-Report)</span>
                   </button>
                   <button
                     onClick={() => setActiveTab('billing')}
@@ -1391,6 +1426,36 @@ export default function VendorDashboard() {
                       />
                     </div>
 
+                    
+                    {/* Customer Loyalty Points Redemption */}
+                    {customerLoyaltyPoints > 0 && (
+                      <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 flex items-center justify-between text-xs animate-fade-in">
+                        <div className="flex items-center gap-1.5 text-amber-800 dark:text-amber-300 font-medium truncate pr-2">
+                          <Award className="h-4 w-4 text-amber-500 min-w-4" />
+                          <span className="truncate">Loyalty: <strong>{customerLoyaltyPoints} pts</strong> ({currency}{customerLoyaltyPoints} discount value)</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (redeemedPoints > 0) {
+                              setRedeemedPoints(0);
+                              addToast('Cancelled points redemption', 'info');
+                            } else {
+                              setRedeemedPoints(customerLoyaltyPoints);
+                              addToast(`Redeemed ${customerLoyaltyPoints} points for ${currency}${customerLoyaltyPoints} discount!`, 'success');
+                            }
+                          }}
+                          className={`px-2.5 py-1 rounded-lg font-bold text-[11px] whitespace-nowrap transition ${
+                            redeemedPoints > 0 
+                              ? 'bg-amber-500 text-white shadow-sm' 
+                              : 'bg-white dark:bg-navy-800 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700 hover:bg-amber-100'
+                          }`}
+                        >
+                          {redeemedPoints > 0 ? '✓ Redeemed' : 'Redeem'}
+                        </button>
+                      </div>
+                    )}
+
                     {/* Cart Items List with Photos */}
                     <div className="max-h-72 overflow-y-auto space-y-2 pr-1">
                       {cartItems.length > 0 ? (
@@ -1675,6 +1740,16 @@ export default function VendorDashboard() {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => {
+                      const ok = exportProductsToCSV(products);
+                      if (ok) addToast('Exported product catalog to CSV file!', 'success');
+                    }}
+                    className="px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-navy-800 border border-slate-200 dark:border-navy-700 text-slate-700 dark:text-slate-200 hover:text-violet-600 font-semibold text-xs flex items-center gap-1.5 transition shadow-sm"
+                  >
+                    <Download className="h-4 w-4" />
+                    <span>Export Catalog CSV</span>
+                  </button>
+                  <button
+                    onClick={() => {
                       setEditingProduct(null);
                       setProductForm({
                         name: '', sku: '', barcode: '', category: 'General', unit: 'piece',
@@ -1794,6 +1869,16 @@ export default function VendorDashboard() {
                     View, reprint thermal receipts, download A4 tax PDFs, or share via WhatsApp.
                   </p>
                 </div>
+                <button
+                  onClick={() => {
+                    const ok = exportInvoicesToCSV(bills);
+                    if (ok) addToast('Exported invoices to CSV file!', 'success');
+                  }}
+                  className="px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-navy-800 border border-slate-200 dark:border-navy-700 text-slate-700 dark:text-slate-200 hover:text-violet-600 font-semibold text-xs flex items-center gap-1.5 transition shadow-sm"
+                >
+                  <Download className="h-4 w-4" />
+                  <span>Export Invoices CSV</span>
+                </button>
               </div>
 
               <div className="p-5 rounded-2xl bg-white dark:bg-navy-800 border border-slate-200 dark:border-navy-700 shadow-card-soft">
@@ -1903,6 +1988,16 @@ export default function VendorDashboard() {
                     Track customer credit balances, payment histories, and contact info.
                   </p>
                 </div>
+                <button
+                  onClick={() => {
+                    const ok = exportCustomersToCSV(customers);
+                    if (ok) addToast('Exported customer ledger to CSV file!', 'success');
+                  }}
+                  className="px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-navy-800 border border-slate-200 dark:border-navy-700 text-slate-700 dark:text-slate-200 hover:text-violet-600 font-semibold text-xs flex items-center gap-1.5 transition shadow-sm"
+                >
+                  <Download className="h-4 w-4" />
+                  <span>Export Ledger CSV</span>
+                </button>
               </div>
 
               <div className="p-5 rounded-2xl bg-white dark:bg-navy-800 border border-slate-200 dark:border-navy-700 shadow-card-soft">
@@ -1928,16 +2023,32 @@ export default function VendorDashboard() {
                           </td>
                           <td className="py-2.5 px-3 text-right">
                             {Number(c.pendingCredit || 0) > 0 && (
-                              <button
-                                onClick={() => {
-                                  setPayUdhaarCustomer(c);
-                                  setPayUdhaarAmount(String(c.pendingCredit));
-                                  setShowPayUdhaarModal(true);
-                                }}
-                                className="px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-300 font-bold hover:bg-emerald-100 transition"
-                              >
-                                Record Payment
-                              </button>
+                              <div className="flex items-center justify-end gap-1.5">
+                                <a
+                                  href={`https://wa.me/${(c.mobile || '').replace(/\D/g, '')}?text=${encodeURIComponent(
+                                    `🙏 Namaste ${c.name} ji,\nAapke store *${selectedStore?.name || 'Hamari Dukan'}* par kul *${currency}${c.pendingCredit}* ka Udhaar balance baaki hai.\nKripya shighra bhugtan karein.\n` +
+                                    (selectedStore?.upiId ? `💳 UPI ID: ${selectedStore.upiId}\n\n` : '') +
+                                    `Dhanyawad!\n_${selectedStore?.name || 'VoiceBill AI'}_`
+                                  )}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 font-bold hover:bg-emerald-100 dark:hover:bg-emerald-900 transition flex items-center gap-1 text-[11px]"
+                                  title="Send WhatsApp payment reminder"
+                                >
+                                  <Share2 className="h-3 w-3" />
+                                  <span>Reminder</span>
+                                </a>
+                                <button
+                                  onClick={() => {
+                                    setPayUdhaarCustomer(c);
+                                    setPayUdhaarAmount(String(c.pendingCredit));
+                                    setShowPayUdhaarModal(true);
+                                  }}
+                                  className="px-2.5 py-1 rounded-lg bg-violet-50 dark:bg-violet-950 text-violet-600 dark:text-violet-300 font-bold hover:bg-violet-100 transition"
+                                >
+                                  Pay
+                                </button>
+                              </div>
                             )}
                           </td>
                         </tr>
@@ -2002,6 +2113,16 @@ export default function VendorDashboard() {
                     Record operating costs (Rent, Salaries, Utilities) to measure true net profit.
                   </p>
                 </div>
+                <button
+                  onClick={() => {
+                    const ok = exportExpensesToCSV(expenses);
+                    if (ok) addToast('Exported expenses to CSV file!', 'success');
+                  }}
+                  className="px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-navy-800 border border-slate-200 dark:border-navy-700 text-slate-700 dark:text-slate-200 hover:text-violet-600 font-semibold text-xs flex items-center gap-1.5 transition shadow-sm"
+                >
+                  <Download className="h-4 w-4" />
+                  <span>Export Expenses CSV</span>
+                </button>
                 <button
                   onClick={() => setShowAddExpenseModal(true)}
                   className="px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-bold text-xs shadow-glow-violet transition flex items-center gap-1.5"
@@ -2449,39 +2570,40 @@ export default function VendorDashboard() {
         </div>
       )}
 
-      {/* Barcode Simulator Modal */}
-      {showBarcodeModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-navy-950/70 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white dark:bg-navy-900 border border-slate-200 dark:border-navy-700 rounded-2xl max-w-md w-full p-5 shadow-2xl">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-navy-800">
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <QrCode className="h-4 w-4 text-violet-600" />
-                Barcode Scanner & Quick Add
-              </h3>
-              <button onClick={() => setShowBarcodeModal(false)}><X className="h-4 w-4 text-slate-400" /></button>
-            </div>
-            <div className="space-y-3 pt-3 text-xs">
-              <p className="text-slate-500">Tap any sample barcode below to instantly add to bill:</p>
-              <div className="space-y-1.5 max-h-60 overflow-y-auto">
-                {products.filter(p => p.barcode).slice(0, 8).map(p => (
-                  <button
-                    key={p._id}
-                    onClick={() => {
-                      addItemToCart(p, 1);
-                      addToast(`Scanned: ${p.name}`, 'success');
-                      setShowBarcodeModal(false);
-                    }}
-                    className="w-full p-2 rounded-xl bg-slate-50 dark:bg-navy-800 border border-slate-200 dark:border-navy-700 hover:border-violet-500 text-left flex items-center justify-between"
-                  >
-                    <span className="font-semibold truncate pr-2">{p.name}</span>
-                    <span className="font-mono text-violet-600 font-bold">{p.barcode}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      
+      {/* Live Camera & Webcam Barcode Scanner Modal */}
+      <CameraBarcodeScannerModal
+        isOpen={showBarcodeModal}
+        onClose={() => setShowBarcodeModal(false)}
+        products={products}
+        onBarcodeDetected={(code, matchedProduct) => {
+          if (matchedProduct) {
+            addItemToCart(matchedProduct, 1);
+            addToast(`Scanned & Added: ${matchedProduct.name}`, 'success');
+          } else {
+            addItemToCart({
+              name: `Scanned Item (${code})`,
+              price: 50,
+              barcode: code,
+              quantity: 1,
+              unit: 'piece',
+              taxRate: 5
+            }, 1);
+            addToast(`Added new item with barcode ${code}`, 'info');
+          }
+          setShowBarcodeModal(false);
+        }}
+      />
+
+      {/* Day-End Cash Drawer & Z-Report Modal */}
+      <CashDrawerReconciliationModal
+        isOpen={showCashDrawerModal}
+        onClose={() => setShowCashDrawerModal(false)}
+        store={selectedStore}
+        orders={bills}
+        expenses={expenses}
+        activeRole={activeRole}
+      />
 
       {/* Toast Notifications Overlay */}
       <div className="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm pointer-events-none">
