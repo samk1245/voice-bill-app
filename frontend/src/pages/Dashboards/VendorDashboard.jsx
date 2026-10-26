@@ -17,6 +17,7 @@ import HelpShortcutsModal from '../../components/HelpShortcutsModal.jsx';
 import ThermalReceipt from '../../components/ThermalReceipt.jsx';
 import CameraBarcodeScannerModal from '../../components/CameraBarcodeScannerModal.jsx';
 import CashDrawerReconciliationModal from '../../components/CashDrawerReconciliationModal.jsx';
+import SettingsHub from '../../components/SettingsHub.jsx';
 import { 
   exportInvoicesToCSV, 
   exportProductsToCSV, 
@@ -2376,74 +2377,26 @@ export default function VendorDashboard() {
           )}
 
           {/* =========================================================================
-              TAB 14: 12 BUSINESS PROFILES & STORE SETTINGS
+              TAB 14: UNIVERSAL BUSINESS SETTINGS & HARDWARE CONFIG
           ========================================================================= */}
           {activeTab === 'settings' && (
-            <div className="space-y-6 animate-fade-in max-w-4xl mx-auto">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    <Settings className="h-6 w-6 text-violet-600 dark:text-violet-400" />
-                    Business Configuration & 12 Industry Profiles
-                  </h1>
-                  <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-                    Adapt invoice numbering, tax calculation policies, and switch industry catalogs.
-                  </p>
-                </div>
-                <button
-                  onClick={() => setShowTemplateModal(true)}
-                  className="px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-bold text-xs shadow-glow-violet transition flex items-center gap-1.5"
-                >
-                  <Sparkles className="h-4 w-4" />
-                  <span>Choose Industry Profile</span>
-                </button>
-              </div>
-
-              {/* Current Store Details Form */}
-              <div className="p-5 rounded-2xl bg-white dark:bg-navy-800 border border-slate-200 dark:border-navy-700 shadow-card-soft space-y-4">
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white border-b border-slate-100 dark:border-navy-700 pb-2">
-                  Active Store Identity
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                  <div>
-                    <label className="block text-slate-500 mb-1">Business / Shop Name</label>
-                    <input
-                      type="text"
-                      value={selectedStore?.name || ''}
-                      readOnly
-                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-navy-900 border border-slate-200 dark:border-navy-700 font-bold"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-slate-500 mb-1">Industry Category</label>
-                    <input
-                      type="text"
-                      value={selectedStore?.category || 'Universal'}
-                      readOnly
-                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-navy-900 border border-slate-200 dark:border-navy-700 font-bold text-violet-600 dark:text-violet-400"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-slate-500 mb-1">GSTIN Number</label>
-                    <input
-                      type="text"
-                      value={selectedStore?.gstNumber || '07AAAAA0000A1Z5'}
-                      readOnly
-                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-navy-900 border border-slate-200 dark:border-navy-700 font-mono"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-slate-500 mb-1">UPI VPA for QR Invoicing</label>
-                    <input
-                      type="text"
-                      value={selectedStore?.upiId || 'shop@upi'}
-                      readOnly
-                      className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-navy-900 border border-slate-200 dark:border-navy-700 font-mono text-emerald-600"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
+            <SettingsHub
+              store={selectedStore}
+              onUpdateStore={(updated) => setSelectedStore(updated)}
+              token={token}
+              addToast={addToast}
+              soundEnabled={soundEnabled}
+              setSoundEnabled={setSoundEnabled}
+              talkbackEnabled={talkbackEnabled}
+              setTalkbackEnabled={setTalkbackEnabled}
+              voiceLang={voiceLang}
+              setVoiceLang={setVoiceLang}
+              currency={currency}
+              setCurrency={setCurrency}
+              onOpenTemplateModal={() => setShowTemplateModal(true)}
+              bills={bills}
+              expenses={expenses}
+            />
           )}
 
           {/* =========================================================================

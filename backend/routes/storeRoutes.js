@@ -320,4 +320,79 @@ router.get('/meta/templates', (req, res) => {
   res.json(meta);
 });
 
+
+// 4b. Full Store Database Backup Export
+router.get('/:id/backup', authenticate, async (req, res) => {
+  try {
+    const store = await Store.findById(req.params.id);
+    if (!store) return res.status(404).json({ message: 'Store not found' });
+
+    const { Product, Order, Customer, Expense } = await import('../models/index.js');
+    const [products, orders, customers, expenses] = await Promise.all([
+      Product.find({ storeId: req.params.id }),
+      Order.find({ storeId: req.params.id }),
+      Customer.find({ storeId: req.params.id }),
+      Expense.find({ storeId: req.params.id })
+    ]);
+
+    const backupData = {
+      version: '2.0.0',
+      exportedAt: new Date().toISOString(),
+      store,
+      products,
+      orders,
+      customers,
+      expenses
+    };
+
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="voicebill_backup_${store.slug || 'store'}_${new Date().toISOString().slice(0, 10)}.json"`);
+    res.json(backupData);
+  } catch (err) {
+    console.error('Backup error:', err);
+    res.status(500).json({ message: 'Error creating database backup', error: err.message });
+  }
+});
+
+// 4c. Restore Store Database from Backup JSON
+router.post('/:id/restore', authenticate, async (req, res) => {
+  try {
+    const { backup } = req.body;
+    if (!backup || !backup.products || !backup.store) {
+      return res.status(400).json({ message: 'Invalid backup file structure' });
+    }
+
+    const { Product, Customer } = await import('../models/index.js');
+    let restoredProducts = 0;
+    let restoredCustomers = 0;
+
+    // Restore products
+    for (const p of backup.products || []) {
+      const existing = await Product.findOne({ storeId: req.params.id, name: p.name });
+      if (!existing) {
+        await Product.create({ ...p, storeId: req.params.id });
+        restoredProducts++;
+      }
+    }
+
+    // Restore customers
+    for (const c of backup.customers || []) {
+      const existing = await Customer.findOne({ storeId: req.params.id, name: c.name });
+      if (!existing) {
+        await Customer.create({ ...c, storeId: req.params.id });
+        restoredCustomers++;
+      }
+    }
+
+    res.json({
+      message: 'Restore completed successfully',
+      restoredProducts,
+      restoredCustomers
+    });
+  } catch (err) {
+    console.error('Restore error:', err);
+    res.status(500).json({ message: 'Error restoring backup data', error: err.message });
+  }
+});
+
 export default router;
