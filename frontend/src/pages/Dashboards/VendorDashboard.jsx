@@ -18,6 +18,7 @@ import ThermalReceipt from '../../components/ThermalReceipt.jsx';
 import CameraBarcodeScannerModal from '../../components/CameraBarcodeScannerModal.jsx';
 import CashDrawerReconciliationModal from '../../components/CashDrawerReconciliationModal.jsx';
 import SettingsHub from '../../components/SettingsHub.jsx';
+import CommandPalette from '../../components/CommandPalette.jsx';
 import { 
   exportInvoicesToCSV, 
   exportProductsToCSV, 
@@ -75,6 +76,12 @@ export default function VendorDashboard() {
   const [voiceLang, setVoiceLang] = useState('hi-IN');
   const [showCashDrawerModal, setShowCashDrawerModal] = useState(false);
   const [redeemedPoints, setRedeemedPoints] = useState(0);
+  const [showCommandPalette, setShowCommandPalette] = useState(false);
+  const [deleteInvoiceModal, setDeleteInvoiceModal] = useState({ isOpen: false, invoice: null, loading: false });
+  const [customerDetailModal, setCustomerDetailModal] = useState({ isOpen: false, customer: null });
+  const [invoiceSearchQuery, setInvoiceSearchQuery] = useState('');
+  const [invoiceStatusFilter, setInvoiceStatusFilter] = useState('All');
+  const [customerSearchQuery, setCustomerSearchQuery] = useState('');
 
   // Stores & Shop Data
   const [stores, setStores] = useState([]);
@@ -278,14 +285,16 @@ export default function VendorDashboard() {
         e.preventDefault();
         setActiveTab('billmate');
       }
-      // Ctrl + K -> Focus Search
-      else if (e.ctrlKey && e.key.toLowerCase() === 'k') {
+      // Ctrl + K / Cmd + K -> Open Command Palette
+      else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
-        const searchInput = document.querySelector('input[placeholder*="Search"]');
-        if (searchInput) searchInput.focus();
+        setShowCommandPalette(prev => !prev);
       }
       // Esc -> Close active modals
       else if (e.key === 'Escape') {
+        setShowCommandPalette(false);
+        setDeleteInvoiceModal({ isOpen: false, invoice: null, loading: false });
+        setCustomerDetailModal({ isOpen: false, customer: null });
         setShowTemplateModal(false);
         setShowHelpModal(false);
         setShowBarcodeModal(false);
@@ -490,12 +499,88 @@ export default function VendorDashboard() {
     try {
       const parsed = parseVoiceCommand(commandText, products, customers);
 
+      // Customer setting intent
+      if (parsed.intent === 'customer_set') {
+        setCartCustomerInput(prev => ({
+          ...prev,
+          name: parsed.customerName || prev.name,
+          mobile: parsed.customerPhone || prev.mobile
+        }));
+        if (parsed.customer) {
+          setCartCustomer(parsed.customer);
+        }
+        if (soundEnabled) playSuccessChime();
+        if (talkbackEnabled) {
+          speakVoice(`Customer ${parsed.customerName} set kar diya.`);
+        }
+        addToast(`Customer set to ${parsed.customerName}${parsed.customerPhone ? ` (${parsed.customerPhone})` : ''}`, 'info');
+        setIsProcessingAI(false);
+        return;
+      }
+
+      // Quantity change intent
+      if (parsed.intent === 'update_quantity') {
+        setCartItems(prev => {
+          if (prev.length === 0) return prev;
+          let found = false;
+          return prev.map((item, idx) => {
+            const isMatch = parsed.productName
+              ? item.name.toLowerCase().includes(parsed.productName.toLowerCase())
+              : idx === prev.length - 1;
+            if (isMatch && !found) {
+              found = true;
+              const newQ = parsed.newQuantity || 1;
+              return { ...item, quantity: newQ, lineTotal: item.price * newQ };
+            }
+            return item;
+          });
+        });
+        if (soundEnabled) playClickSound();
+        addToast(parsed.message || `Updated quantity to ${parsed.newQuantity}`, 'success');
+        setIsProcessingAI(false);
+        return;
+      }
+
+      // Remove item intent
+      if (parsed.intent === 'remove_last_item') {
+        setCartItems(prev => {
+          if (prev.length === 0) return prev;
+          const removed = prev[prev.length - 1];
+          addToast(`Removed ${removed.name} from cart`, 'info');
+          return prev.slice(0, -1);
+        });
+        if (soundEnabled) playDeleteSound();
+        setIsProcessingAI(false);
+        return;
+      }
+
+      if (parsed.intent === 'remove_item') {
+        setCartItems(prev => {
+          return prev.filter(item => 
+            !item.name.toLowerCase().includes((parsed.productName || '').toLowerCase())
+          );
+        });
+        if (soundEnabled) playDeleteSound();
+        addToast(`Removed item ${parsed.productName} from cart`, 'info');
+        setIsProcessingAI(false);
+        return;
+      }
+
+      // Direct Action Commands
       if (parsed.intent === 'action') {
         if (parsed.action === 'clear_cart') {
           handleClearCart();
           addToast('Cart cleared via voice.', 'info');
         } else if (parsed.action === 'print_bill' || parsed.action === 'confirm_bill') {
           handleFinalizeBill(true);
+        } else if (parsed.action === 'generate_pdf') {
+          if (cartItems.length > 0) {
+            handleFinalizeBill(false);
+          } else {
+            addToast('Cart is empty. Add items first before generating PDF.', 'warning');
+          }
+        } else if (parsed.action === 'whatsapp_share') {
+          handleShareWhatsApp();
         } else if (parsed.action === 'show_total') {
           if (talkbackEnabled) {
             speakVoice(`Aapka kul total hai ${computedTotals.grandTotal} rupaye.`);
@@ -525,17 +610,28 @@ export default function VendorDashboard() {
         return;
       }
 
-      // Add detected items
-      if (parsed.detectedItems && parsed.detectedItems.length > 0) {
-        parsed.detectedItems.forEach(item => {
-          addItemToCart(item);
+      // Add detected items (check both parsed.items and parsed.detectedItems)
+      const itemsToAdd = parsed.items || parsed.detectedItems || [];
+      if (itemsToAdd.length > 0) {
+        itemsToAdd.forEach(item => {
+          addItemToCart(item, item.quantity || 1);
         });
         if (soundEnabled) playScanBeep();
         if (talkbackEnabled) {
-          const names = parsed.detectedItems.map(i => `${i.quantity} ${i.name}`).join(' aur ');
+          const names = itemsToAdd.map(i => `${i.quantity} ${i.name}`).join(' aur ');
           speakVoice(`${names} bill mein jod diya.`);
         }
-        addToast(`Added ${parsed.detectedItems.length} item(s) from voice.`, 'success');
+        addToast(`Added ${itemsToAdd.length} item(s) from voice.`, 'success');
+      }
+
+      // Customer detected inside multi-item sentence
+      if (parsed.customer) {
+        setCartCustomerInput(prev => ({
+          ...prev,
+          name: parsed.customer.name || prev.name,
+          mobile: parsed.customer.mobile || prev.mobile
+        }));
+        setCartCustomer(parsed.customer);
       }
 
       // Ambiguity Clarifications
@@ -548,6 +644,55 @@ export default function VendorDashboard() {
       addToast('Voice parser error. Please try again.', 'error');
     } finally {
       setIsProcessingAI(false);
+    }
+  };
+
+  // Clone / Duplicate an existing invoice into cart for instant repeat order
+  const handleDuplicateInvoice = (invoice) => {
+    if (!invoice || !invoice.items) return;
+    setCartItems(invoice.items.map(item => ({
+      productId: item.productId,
+      sku: item.sku || 'SKU-000',
+      name: item.name,
+      price: item.price,
+      quantity: item.quantity,
+      unit: item.unit || 'pcs',
+      taxRate: item.taxRate || 5,
+      lineTotal: item.lineTotal || (item.price * item.quantity)
+    })));
+    setCartCustomerInput({
+      name: invoice.customerName || '',
+      mobile: invoice.customerMobile || '',
+      address: invoice.customerAddress || '',
+      gstin: invoice.customerGstin || ''
+    });
+    setOverallDiscount(invoice.discount || 0);
+    setActiveTab('billing');
+    addToast(`Cloned Invoice #${invoice.invoiceNumber} into active cart!`, 'info');
+    if (soundEnabled) playClickSound();
+  };
+
+  const confirmDeleteInvoice = async () => {
+    const inv = deleteInvoiceModal.invoice;
+    if (!inv) return;
+    setDeleteInvoiceModal(prev => ({ ...prev, loading: true }));
+    try {
+      const res = await fetch(`/api/orders/${inv._id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Failed to delete invoice');
+      
+      setBills(prev => prev.filter(b => b._id !== inv._id));
+      addToast(`Invoice #${inv.invoiceNumber} deleted and stock restored.`, 'success');
+      if (soundEnabled) playDeleteSound();
+      setDeleteInvoiceModal({ isOpen: false, invoice: null, loading: false });
+      if (selectedStore) fetchAllStoreData(selectedStore._id);
+    } catch (err) {
+      console.error('Delete invoice error:', err);
+      addToast(err.message || 'Error deleting invoice', 'error');
+      setDeleteInvoiceModal(prev => ({ ...prev, loading: false }));
     }
   };
 
@@ -1076,6 +1221,7 @@ export default function VendorDashboard() {
           setActiveRole={setActiveRole}
           onOpenHelpModal={() => setShowHelpModal(true)}
           onOpenCashDrawerModal={() => setShowCashDrawerModal(true)}
+          onOpenCommandPalette={() => setShowCommandPalette(true)}
           globalSearch={globalSearch}
           setGlobalSearch={setGlobalSearch}
           onNewBillClick={() => setActiveTab('billing')}
@@ -1867,19 +2013,51 @@ export default function VendorDashboard() {
                     Invoices & Receipts History ({bills.length})
                   </h1>
                   <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-                    View, reprint thermal receipts, download A4 tax PDFs, or share via WhatsApp.
+                    Search, filter, reprint thermal receipts, download A4 tax PDFs, duplicate orders or share via WhatsApp.
                   </p>
                 </div>
-                <button
-                  onClick={() => {
-                    const ok = exportInvoicesToCSV(bills);
-                    if (ok) addToast('Exported invoices to CSV file!', 'success');
-                  }}
-                  className="px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-navy-800 border border-slate-200 dark:border-navy-700 text-slate-700 dark:text-slate-200 hover:text-violet-600 font-semibold text-xs flex items-center gap-1.5 transition shadow-sm"
-                >
-                  <Download className="h-4 w-4" />
-                  <span>Export Invoices CSV</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      const ok = exportInvoicesToCSV(bills);
+                      if (ok) addToast('Exported invoices to CSV file!', 'success');
+                    }}
+                    className="px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-navy-800 border border-slate-200 dark:border-navy-700 text-slate-700 dark:text-slate-200 hover:text-violet-600 font-semibold text-xs flex items-center gap-1.5 transition shadow-sm"
+                  >
+                    <Download className="h-4 w-4" />
+                    <span>Export CSV</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Status Filters & Search Bar */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3 rounded-2xl bg-white dark:bg-navy-800 border border-slate-200 dark:border-navy-700 shadow-sm">
+                <div className="flex items-center gap-1.5 overflow-x-auto text-xs">
+                  {['All', 'Paid', 'Unpaid', 'Partial', 'Cancelled'].map(status => (
+                    <button
+                      key={status}
+                      onClick={() => setInvoiceStatusFilter(status)}
+                      className={`px-3 py-1.5 rounded-xl font-bold transition whitespace-nowrap ${
+                        invoiceStatusFilter === status
+                          ? 'bg-violet-600 text-white shadow-sm'
+                          : 'bg-slate-100 dark:bg-navy-900 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+                      }`}
+                    >
+                      {status} {status === 'All' ? `(${bills.length})` : `(${bills.filter(b => (status === 'Cancelled' ? b.status === 'Cancelled' : b.paymentStatus === status && b.status !== 'Cancelled')).length})`}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="relative min-w-[200px]">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Search invoice #, customer..."
+                    value={invoiceSearchQuery}
+                    onChange={(e) => setInvoiceSearchQuery(e.target.value)}
+                    className="w-full pl-8 pr-3 py-1.5 rounded-xl text-xs bg-slate-50 dark:bg-navy-900 border border-slate-200 dark:border-navy-700 text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-violet-500"
+                  />
+                </div>
               </div>
 
               <div className="p-5 rounded-2xl bg-white dark:bg-navy-800 border border-slate-200 dark:border-navy-700 shadow-card-soft">
@@ -1897,32 +2075,69 @@ export default function VendorDashboard() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-navy-700/50">
-                      {bills.map(b => (
-                        <tr key={b._id} className="hover:bg-slate-50 dark:hover:bg-navy-900/40">
-                          <td className="py-2.5 px-3 font-mono font-bold text-violet-600 dark:text-violet-400">{b.invoiceNumber}</td>
-                          <td className="py-2.5 px-3 text-slate-500">{new Date(b.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</td>
-                          <td className="py-2.5 px-3 font-medium text-slate-800 dark:text-slate-200">{b.customerName}</td>
-                          <td className="py-2.5 px-3 font-bold text-slate-900 dark:text-white">₹{b.totalAmount}</td>
-                          <td className="py-2.5 px-3">{b.paymentMethod}</td>
-                          <td className="py-2.5 px-3">
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                              b.paymentStatus === 'Paid' ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400' :
-                              b.paymentStatus === 'Partial' ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400' :
-                              'bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400'
-                            }`}>
-                              {b.paymentStatus}
-                            </span>
-                          </td>
-                          <td className="py-2.5 px-3 text-right">
-                            <button
-                              onClick={() => setReceiptInvoice(b)}
-                              className="px-2.5 py-1 rounded-lg bg-violet-50 dark:bg-violet-950 text-violet-600 dark:text-violet-300 font-bold hover:bg-violet-100 transition"
-                            >
-                              Receipt / Print
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                      {bills
+                        .filter(b => {
+                          if (invoiceStatusFilter !== 'All') {
+                            if (invoiceStatusFilter === 'Cancelled') {
+                              if (b.status !== 'Cancelled') return false;
+                            } else {
+                              if (b.paymentStatus !== invoiceStatusFilter || b.status === 'Cancelled') return false;
+                            }
+                          }
+                          if (invoiceSearchQuery) {
+                            const q = invoiceSearchQuery.toLowerCase();
+                            return (
+                              (b.invoiceNumber || '').toLowerCase().includes(q) ||
+                              (b.customerName || '').toLowerCase().includes(q) ||
+                              (b.customerMobile || '').includes(q)
+                            );
+                          }
+                          return true;
+                        })
+                        .map(b => (
+                          <tr key={b._id} className="hover:bg-slate-50 dark:hover:bg-navy-900/40">
+                            <td className="py-2.5 px-3 font-mono font-bold text-violet-600 dark:text-violet-400">{b.invoiceNumber}</td>
+                            <td className="py-2.5 px-3 text-slate-500">{new Date(b.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</td>
+                            <td className="py-2.5 px-3 font-medium text-slate-800 dark:text-slate-200">{b.customerName}</td>
+                            <td className="py-2.5 px-3 font-bold text-slate-900 dark:text-white">₹{b.totalAmount}</td>
+                            <td className="py-2.5 px-3">{b.paymentMethod}</td>
+                            <td className="py-2.5 px-3">
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                b.status === 'Cancelled' ? 'bg-slate-200 dark:bg-slate-800 text-slate-500 line-through' :
+                                b.paymentStatus === 'Paid' ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400' :
+                                b.paymentStatus === 'Partial' ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400' :
+                                'bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400'
+                              }`}>
+                                {b.status === 'Cancelled' ? 'Cancelled' : b.paymentStatus}
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-3 text-right">
+                              <div className="flex items-center justify-end gap-1.5">
+                                <button
+                                  onClick={() => setReceiptInvoice(b)}
+                                  className="px-2.5 py-1 rounded-lg bg-violet-50 dark:bg-violet-950 text-violet-600 dark:text-violet-300 font-bold hover:bg-violet-100 transition text-[11px]"
+                                  title="Print or preview thermal receipt"
+                                >
+                                  Print
+                                </button>
+                                <button
+                                  onClick={() => handleDuplicateInvoice(b)}
+                                  className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-navy-900 text-slate-600 dark:text-slate-300 font-bold hover:bg-slate-200 transition text-[11px]"
+                                  title="Clone this order into active cart"
+                                >
+                                  Clone
+                                </button>
+                                <button
+                                  onClick={() => setDeleteInvoiceModal({ isOpen: true, invoice: b, loading: false })}
+                                  className="p-1 rounded-lg text-slate-400 hover:text-rose-500 transition"
+                                  title="Delete invoice and restore stock"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
                     </tbody>
                   </table>
                 </div>
@@ -2280,6 +2495,18 @@ export default function VendorDashboard() {
                     💬 Today's sales?
                   </button>
                   <button
+                    onClick={() => handleSendBillmateMessage('How much did I earn this month?')}
+                    className="px-2.5 py-1 rounded-lg bg-white dark:bg-navy-800 border border-slate-200 dark:border-navy-700 hover:border-violet-500 whitespace-nowrap transition"
+                  >
+                    💰 Month's Profit?
+                  </button>
+                  <button
+                    onClick={() => handleSendBillmateMessage('Predict next month revenue')}
+                    className="px-2.5 py-1 rounded-lg bg-white dark:bg-navy-800 border border-slate-200 dark:border-navy-700 hover:border-violet-500 whitespace-nowrap transition"
+                  >
+                    🎯 Predict Next Month?
+                  </button>
+                  <button
                     onClick={() => handleSendBillmateMessage('Which products generated the most revenue?')}
                     className="px-2.5 py-1 rounded-lg bg-white dark:bg-navy-800 border border-slate-200 dark:border-navy-700 hover:border-violet-500 whitespace-nowrap transition"
                   >
@@ -2290,6 +2517,18 @@ export default function VendorDashboard() {
                     className="px-2.5 py-1 rounded-lg bg-white dark:bg-navy-800 border border-slate-200 dark:border-navy-700 hover:border-violet-500 whitespace-nowrap transition"
                   >
                     👥 Pending Udhaar?
+                  </button>
+                  <button
+                    onClick={() => handleSendBillmateMessage('Show my top 5 customers')}
+                    className="px-2.5 py-1 rounded-lg bg-white dark:bg-navy-800 border border-slate-200 dark:border-navy-700 hover:border-violet-500 whitespace-nowrap transition"
+                  >
+                    💎 Top 5 Customers?
+                  </button>
+                  <button
+                    onClick={() => handleSendBillmateMessage('Recommend payment follow-ups')}
+                    className="px-2.5 py-1 rounded-lg bg-white dark:bg-navy-800 border border-slate-200 dark:border-navy-700 hover:border-violet-500 whitespace-nowrap transition"
+                  >
+                    📞 Who to follow up?
                   </button>
                   <button
                     onClick={() => handleSendBillmateMessage('Check low stock alerts')}
@@ -2557,6 +2796,178 @@ export default function VendorDashboard() {
         expenses={expenses}
         activeRole={activeRole}
       />
+
+      {/* Command Palette (Ctrl+K) */}
+      <CommandPalette
+        isOpen={showCommandPalette}
+        onClose={() => setShowCommandPalette(false)}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        darkMode={darkMode}
+        toggleDarkMode={toggleDarkMode}
+        onStartVoice={toggleRecording}
+        onNewBill={handleClearCart}
+        onOpenCashDrawer={() => setShowCashDrawerModal(true)}
+        onOpenTemplateModal={() => setShowTemplateModal(true)}
+        onAskBillMate={(p) => {
+          handleSendBillmateMessage(p);
+        }}
+        onExportCSV={() => {
+          const ok = exportInvoicesToCSV(bills);
+          if (ok) addToast('Exported invoices to CSV file!', 'success');
+        }}
+      />
+
+      {/* Delete Invoice Confirmation Modal */}
+      {deleteInvoiceModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in">
+          <div className="w-full max-w-md p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl">
+            <div className="w-12 h-12 rounded-2xl bg-rose-50 dark:bg-rose-950/60 text-rose-500 flex items-center justify-center mb-4">
+              <Trash2 className="h-6 w-6" />
+            </div>
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white">Delete Invoice?</h3>
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
+              Are you sure you want to permanently delete Invoice <strong className="text-slate-800 dark:text-slate-200">#{deleteInvoiceModal.invoice?.invoiceNumber}</strong>?
+              This action will safely restore all item inventory quantities back to stock.
+            </p>
+            <div className="mt-6 flex items-center justify-end gap-3">
+              <button
+                onClick={() => setDeleteInvoiceModal({ isOpen: false, invoice: null, loading: false })}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteInvoice}
+                disabled={deleteInvoiceModal.loading}
+                className="px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-md shadow-rose-600/30 transition flex items-center gap-2"
+              >
+                {deleteInvoiceModal.loading ? 'Deleting...' : 'Confirm Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Customer Profile & CLV Detail Modal */}
+      {customerDetailModal.isOpen && customerDetailModal.customer && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in">
+          <div className="w-full max-w-lg p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl max-h-[85vh] overflow-y-auto">
+            <div className="flex items-start justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-violet-600 to-cyan-500 text-white font-extrabold text-lg flex items-center justify-center shadow-md">
+                  {customerDetailModal.customer.name.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    {customerDetailModal.customer.name}
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                      Number(customerDetailModal.customer.pendingCredit || 0) > 0
+                        ? 'bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-700'
+                        : 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400'
+                    }`}>
+                      {Number(customerDetailModal.customer.pendingCredit || 0) > 0 ? '⚠️ Credit Due' : '⭐ Active Customer'}
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-mono">
+                    {customerDetailModal.customer.mobile || 'No phone recorded'}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setCustomerDetailModal({ isOpen: false, customer: null })}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 my-4">
+              <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
+                <div className="text-[11px] text-slate-400 font-semibold uppercase">Pending Udhaar</div>
+                <div className="text-lg font-extrabold text-amber-600 dark:text-amber-400 mt-1">
+                  {currency}{Number(customerDetailModal.customer.pendingCredit || 0).toLocaleString('en-IN')}
+                </div>
+              </div>
+              <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
+                <div className="text-[11px] text-slate-400 font-semibold uppercase">Loyalty Points</div>
+                <div className="text-lg font-extrabold text-violet-600 dark:text-violet-400 mt-1">
+                  {customerDetailModal.customer.loyaltyPoints || 0} pts
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-2 text-xs text-slate-600 dark:text-slate-300 py-2 border-t border-b border-slate-100 dark:border-slate-800">
+              <div><strong>Address:</strong> {customerDetailModal.customer.address || 'None provided'}</div>
+              <div><strong>GSTIN:</strong> {customerDetailModal.customer.gstin || 'Unregistered Consumer'}</div>
+            </div>
+
+            <div className="mt-4">
+              <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+                Billing & Invoicing History
+              </div>
+              <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-48 overflow-y-auto">
+                {bills.filter(b => b.customerName?.toLowerCase() === customerDetailModal.customer.name.toLowerCase() || (b.customerMobile && b.customerMobile === customerDetailModal.customer.mobile)).map(b => (
+                  <div key={b._id} className="py-2 flex items-center justify-between text-xs">
+                    <div>
+                      <span className="font-mono font-bold text-violet-500">#{b.invoiceNumber}</span>
+                      <span className="text-slate-400 ml-2">{new Date(b.createdAt).toLocaleDateString('en-IN')}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-slate-800 dark:text-slate-100">{currency}{b.totalAmount}</span>
+                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                        b.paymentStatus === 'Paid' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'
+                      }`}>
+                        {b.paymentStatus}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-6 flex items-center justify-end gap-2">
+              <button
+                onClick={() => setCustomerDetailModal({ isOpen: false, customer: null })}
+                className="px-4 py-2 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 transition"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Floating Reactive AI Voice Dock (Displays Soundwave Ripples when recording) */}
+      {isRecording && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-6 py-3.5 rounded-full bg-slate-900/95 dark:bg-slate-950/95 border-2 border-violet-500 shadow-2xl shadow-violet-900/60 backdrop-blur-xl animate-in slide-in-from-bottom duration-300">
+          <div className="relative flex items-center justify-center">
+            <span className="absolute -inset-2 rounded-full bg-rose-500/30 animate-ping" />
+            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-rose-500 to-pink-600 flex items-center justify-center text-white shadow-lg shadow-rose-500/50">
+              <Mic className="h-4 w-4" />
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-1 h-5 px-1">
+            <span className="w-1 bg-cyan-400 rounded-full animate-bounce [animation-delay:-0.3s] h-3" />
+            <span className="w-1 bg-violet-400 rounded-full animate-bounce [animation-delay:-0.15s] h-5" />
+            <span className="w-1 bg-fuchsia-400 rounded-full animate-bounce h-4" />
+            <span className="w-1 bg-cyan-400 rounded-full animate-bounce [animation-delay:-0.2s] h-2" />
+          </div>
+
+          <div className="max-w-xs sm:max-w-sm truncate text-xs font-medium text-white">
+            {liveTranscript ? `"${liveTranscript}"` : 'Listening... Speak items or "10% discount"'}
+          </div>
+
+          <button
+            onClick={toggleRecording}
+            className="ml-2 px-3 py-1 rounded-full bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition flex items-center gap-1"
+          >
+            <Check className="h-3 w-3" />
+            <span>Done</span>
+          </button>
+        </div>
+      )}
 
       {/* Toast Notifications Overlay */}
       <div className="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm pointer-events-none">

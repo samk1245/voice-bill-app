@@ -1,7 +1,7 @@
 // Multilingual AI Voice Command & Billing Parser for VoiceBill AI
 // Supports Hindi, English, Hinglish, offline processing, multi-item extraction,
-// grocery aliases (cheeni, chawal, atta, namak, tel, doodh, etc.),
-// price/quantity parsing, discounts, GST instructions, quantity edits, and invoice commands.
+// grocery & retail aliases, price/quantity parsing, customer extraction,
+// discounts, GST instructions, quantity edits, and invoice commands.
 
 const numberMap = {
   'ek': 1, 'one': 1, '1': 1, 'a': 1, 'an': 1,
@@ -35,7 +35,7 @@ const numberMap = {
   'sau': 100, 'hundred': 100, '100': 100
 };
 
-const parseNumber = (word) => {
+export const parseNumber = (word) => {
   if (!word) return 1;
   const normalized = word.toLowerCase().trim();
   if (numberMap[normalized] !== undefined) {
@@ -46,24 +46,26 @@ const parseNumber = (word) => {
 };
 
 const unitMap = {
-  'kilo': 'kg', 'kg': 'kg', 'kilos': 'kg', 'kilogram': 'kg',
+  'kilo': 'kg', 'kg': 'kg', 'kilos': 'kg', 'kilogram': 'kg', 'kilograms': 'kg',
   'packet': 'packet', 'packets': 'packet', 'pkt': 'packet', 'pkts': 'packet',
   'bottle': 'bottle', 'bottles': 'bottle', 'bot': 'bottle',
   'piece': 'piece', 'pieces': 'piece', 'pc': 'piece', 'pcs': 'piece',
   'gram': 'g', 'grams': 'g', 'g': 'g', 'gm': 'g', 'gms': 'g',
   'strip': 'strip', 'strips': 'strip',
   'litre': 'litre', 'litres': 'litre', 'l': 'litre', 'liter': 'litre', 'liters': 'litre',
-  'tin': 'tin', 'tins': 'tin', 'jar': 'jar', 'jars': 'jar'
+  'tin': 'tin', 'tins': 'tin', 'jar': 'jar', 'jars': 'jar',
+  'box': 'box', 'boxes': 'box', 'pair': 'pair', 'pairs': 'pair',
+  'meter': 'meter', 'meters': 'meter', 'm': 'meter'
 };
 
-const parseUnit = (word) => {
+export const parseUnit = (word) => {
   if (!word) return null;
   const normalized = word.toLowerCase().trim();
   return unitMap[normalized] || null;
 };
 
-// Common Indian Kirana & Grocery Synonyms Map
-const groceryAliases = {
+// Common Indian Kirana, Retail & Lifestyle Synonyms Map
+const commonAliases = {
   'chawal': 'rice',
   'rice': 'rice',
   'cheeni': 'sugar',
@@ -71,6 +73,7 @@ const groceryAliases = {
   'sugar': 'sugar',
   'atta': 'atta',
   'aata': 'atta',
+  'flour': 'atta',
   'namak': 'salt',
   'salt': 'salt',
   'toor dal': 'toor dal',
@@ -98,43 +101,57 @@ const groceryAliases = {
   'lays': 'lays',
   'kurkure': 'kurkure',
   'bhujia': 'bhujia',
-  'sev': 'bhujia',
-  'chai': 'tea',
-  'chai patti': 'tea',
-  'tea': 'tea',
-  'coffee': 'nescafe',
-  'coke': 'coke',
-  'frooti': 'frooti',
-  'sabun': 'dettol',
-  'soap': 'dettol',
-  'surf': 'surf excel',
-  'detergent': 'surf excel',
-  'vim': 'vim',
-  'bartan bar': 'vim',
-  'colgate': 'colgate',
-  'paste': 'colgate',
+  'soap': 'soap',
+  'sabun': 'soap',
+  'shampoo': 'shampoo',
+  'colgate': 'toothpaste',
+  'toothpaste': 'toothpaste',
+  'brush': 'toothbrush',
+  'shirt': 'shirt',
+  'tshirt': 't-shirt',
+  't-shirt': 't-shirt',
+  'pant': 'jeans',
+  'jeans': 'jeans',
+  'pen': 'ball pen',
   'notebook': 'notebook',
   'copy': 'notebook',
-  'pen': 'pen',
-  'mirch': 'mirch',
-  'haldi': 'haldi'
+  'register': 'notebook'
 };
 
 export const parseVoiceCommand = (rawText, products = [], customers = []) => {
   if (!rawText || typeof rawText !== 'string') {
-    return { intent: 'unknown', message: 'Empty voice command received.' };
+    return { intent: 'empty', message: 'No speech recognized.' };
   }
 
   const queryText = rawText.toLowerCase().trim();
 
-  // 1. DIRECT ACTION COMMANDS
+  // 1. CUSTOMER EXTRACTION COMMANDS
+  // e.g. "Create an invoice for Rahul", "Bill for Priya phone 9876543210", "Customer Amit"
+  const createForMatch = queryText.match(/(?:create\s+(?:an?\s+)?invoice\s+for|create\s+bill\s+for|bill\s+for|customer\s+name\s+is|customer)\s+([a-zA-Z\s]+?)(?:\s+(?:with\s+)?(?:phone|mobile|number)?\s*(\d{10}))?$/i) ||
+                         queryText.match(/(?:naam|customer)\s+([a-zA-Z\s]+?)(?:\s+(?:phone|mobile)?\s*(\d{10}))?$/i);
+  if (createForMatch && !queryText.includes('add') && !queryText.includes('shirt') && !queryText.includes('kilo')) {
+    const rawName = createForMatch[1].trim();
+    const phone = createForMatch[2] || '';
+    if (rawName.length > 1 && !['an', 'a', 'the', 'item'].includes(rawName.toLowerCase())) {
+      const existing = customers.find(c => c.name.toLowerCase() === rawName.toLowerCase());
+      return {
+        intent: 'customer_set',
+        customerName: rawName.charAt(0).toUpperCase() + rawName.slice(1),
+        customerPhone: phone || (existing ? existing.mobile : ''),
+        customer: existing || { name: rawName, mobile: phone },
+        message: `Set invoice customer to ${rawName}.`
+      };
+    }
+  }
 
-  // 1a. Clear Cart
+  // 2. DIRECT ACTION COMMANDS
+  // 2a. Clear Cart
   if (
     queryText.includes('clear') ||
     queryText.includes('khali karo') ||
     queryText.includes('sab hata do') ||
-    queryText.includes('reset cart')
+    queryText.includes('empty cart') ||
+    queryText.includes('reset bill')
   ) {
     return {
       intent: 'action',
@@ -143,7 +160,7 @@ export const parseVoiceCommand = (rawText, products = [], customers = []) => {
     };
   }
 
-  // 1b. Print Bill / Receipt
+  // 2b. Print Receipt / Invoice
   if (
     queryText.includes('print receipt') ||
     queryText.includes('print karo') ||
@@ -157,34 +174,52 @@ export const parseVoiceCommand = (rawText, products = [], customers = []) => {
     };
   }
 
-  // 1c. WhatsApp Share
+  // 2c. Generate PDF / Download
   if (
-    queryText.includes('whatsapp') &&
-    (queryText.includes('bhejo') || queryText.includes('share') || queryText.includes('send'))
+    queryText.includes('generate the pdf') ||
+    queryText.includes('generate pdf') ||
+    queryText.includes('download pdf') ||
+    queryText.includes('pdf download') ||
+    queryText.includes('pdf banao')
+  ) {
+    return {
+      intent: 'action',
+      action: 'generate_pdf',
+      message: 'Generate and download PDF invoice command triggered.'
+    };
+  }
+
+  // 2d. Send Invoice to Customer / WhatsApp Share
+  if (
+    (queryText.includes('send') && (queryText.includes('invoice') || queryText.includes('bill') || queryText.includes('customer'))) ||
+    queryText.includes('whatsapp') ||
+    queryText.includes('bhejo') ||
+    queryText.includes('share karo')
   ) {
     return {
       intent: 'action',
       action: 'whatsapp_share',
-      message: 'WhatsApp invoice share command triggered.'
+      message: 'Send invoice to customer command triggered.'
     };
   }
 
-  // 1d. Save & Confirm / Finalize Bill
+  // 2e. Save & Confirm / Finalize Bill
   if (
-    (queryText.includes('save') && queryText.includes('bill')) ||
-    (queryText.includes('confirm') && (queryText.includes('bill') || queryText.includes('order'))) ||
+    (queryText.includes('save') && (queryText.includes('bill') || queryText.includes('invoice'))) ||
+    (queryText.includes('confirm') && (queryText.includes('bill') || queryText.includes('order') || queryText.includes('invoice'))) ||
     queryText.includes('bill confirm') ||
     queryText.includes('bill banao') ||
-    queryText.includes('finalize bill')
+    queryText.includes('finalize bill') ||
+    queryText.includes('generate the invoice and save')
   ) {
     return {
       intent: 'action',
       action: 'confirm_bill',
-      message: 'Save and finalize bill command triggered.'
+      message: 'Save and finalize invoice command triggered.'
     };
   }
 
-  // 1e. Show Total
+  // 2f. Show Total
   if (
     queryText.includes('show me the total') ||
     queryText.includes('total batao') ||
@@ -199,10 +234,11 @@ export const parseVoiceCommand = (rawText, products = [], customers = []) => {
     };
   }
 
-  // 2. TAX / GST COMMANDS
+  // 3. TAX / GST COMMANDS
   if (queryText.includes('gst') || queryText.includes('tax')) {
     const taxMatch = queryText.match(/(\d+)\s*(?:percent|%|pratishat)?\s*(?:gst|tax)/) ||
-                     queryText.match(/(?:gst|tax)\s*(?:of|at)?\s*(\d+)/);
+                     queryText.match(/(?:gst|tax)\s*(?:of|at)?\s*(\d+)/) ||
+                     queryText.match(/add\s*(\d+)\s*(?:percent|%)\s*(?:gst|tax)/i);
     if (taxMatch) {
       const rate = parseInt(taxMatch[1], 10);
       return {
@@ -213,7 +249,7 @@ export const parseVoiceCommand = (rawText, products = [], customers = []) => {
     }
   }
 
-  // 3. DISCOUNT COMMANDS
+  // 4. DISCOUNT COMMANDS
   if (queryText.includes('discount') || queryText.includes('chhoot')) {
     const percentMatch = queryText.match(/(\d+)\s*(?:percent|%)\s*(?:discount|chhoot)/);
     if (percentMatch) {
@@ -237,15 +273,23 @@ export const parseVoiceCommand = (rawText, products = [], customers = []) => {
     }
   }
 
-  // 4. ITEM REMOVAL COMMANDS
+  // 5. ITEM REMOVAL COMMANDS
   if (
-    queryText.includes('remove') ||
+    queryText.startsWith('remove') ||
     queryText.includes('hata do') ||
     queryText.includes('delete') ||
-    queryText.includes('cancel')
+    queryText.includes('remove the') ||
+    queryText.includes('cancel the')
   ) {
+    if (queryText.includes('last item') || queryText.includes('aakhri item')) {
+      return {
+        intent: 'remove_last_item',
+        message: 'Removed last item from cart.'
+      };
+    }
+
     let target = queryText
-      .replace(/remove|hata do|delete|cancel|the|item|product|se|ko|cart/g, '')
+      .replace(/remove the|remove|hata do|delete|cancel|the|item|product|se|ko|cart/g, '')
       .trim();
 
     const matched = products.find(p =>
@@ -260,22 +304,26 @@ export const parseVoiceCommand = (rawText, products = [], customers = []) => {
     };
   }
 
-  // 5. QUANTITY EDIT COMMANDS
+  // 6. QUANTITY EDIT COMMANDS
+  // e.g. "Change the quantity to 5", "Change quantity of shirts to 5", "Quantity 10 kar do"
   if (
     queryText.includes('change the quantity') ||
     queryText.includes('change quantity') ||
     queryText.includes('kar do') ||
-    queryText.includes('badal do')
+    queryText.includes('badal do') ||
+    queryText.match(/change\s+(.+?)\s+quantity\s+to\s+(\d+)/i) ||
+    queryText.match(/quantity\s+(?:to\s+)?(\d+)/i)
   ) {
-    const qtyMatch = queryText.match(/(?:to|kar do)\s*(\d+|ek|do|teen|chaar|paanch|chhe|saat|aath|nau|das|twenty|ten|fifteen)/);
+    const qtyMatch = queryText.match(/(?:to|kar do|make it)\s*(\d+|ek|do|teen|chaar|paanch|chhe|saat|aath|nau|das|twenty|ten|fifteen)/i) ||
+                     queryText.match(/quantity\s+(?:to\s+)?(\d+)/i);
     if (qtyMatch) {
       const newQty = parseNumber(qtyMatch[1]);
       let itemTarget = queryText
-        .replace(/change the quantity of|change quantity of|change|to|kar do|badal do|quantity|ko|\d+/g, '')
+        .replace(/change the quantity of|change quantity of|change the quantity|change quantity|change|to|kar do|badal do|make it|quantity|ko|\d+/gi, '')
         .trim();
 
       const matched = products.find(p =>
-        p.name.toLowerCase().includes(itemTarget) || itemTarget.includes(p.name.toLowerCase())
+        itemTarget && (p.name.toLowerCase().includes(itemTarget) || itemTarget.includes(p.name.toLowerCase()))
       );
 
       return {
@@ -283,12 +331,12 @@ export const parseVoiceCommand = (rawText, products = [], customers = []) => {
         productName: matched ? matched.name : itemTarget,
         productId: matched ? matched._id : null,
         newQuantity: newQty,
-        message: `Updated quantity of ${matched ? matched.name : itemTarget} to ${newQty}.`
+        message: `Updated quantity${matched ? ` of ${matched.name}` : ''} to ${newQty}.`
       };
     }
   }
 
-  // 6. UDHAAR / LEDGER COMMANDS
+  // 7. UDHAAR / LEDGER COMMANDS
   if (queryText.includes('udhaar') || queryText.includes('credit')) {
     const amountMatch = queryText.match(/(\d+)\s*(?:rupees|rupaye|rs)?/);
     const amount = amountMatch ? parseInt(amountMatch[1], 10) : 0;
@@ -310,7 +358,7 @@ export const parseVoiceCommand = (rawText, products = [], customers = []) => {
     }
   }
 
-  // 7. MULTI-ITEM BILLING PARSER
+  // 8. MULTI-ITEM BILLING PARSER
   const segments = queryText
     .split(/\s+aur\s+|\s+and\s+|\s+plus\s+|,\s*/)
     .map(s => s.trim())
@@ -327,13 +375,14 @@ export const parseVoiceCommand = (rawText, products = [], customers = []) => {
   });
 
   segments.forEach(segment => {
-    let seg = segment.replace(/^(add|dena|de do|karo|please|daal do)\s+/i, '').trim();
+    let seg = segment.replace(/^(add|dena|de do|karo|please|daal do|put)\s+/i, '').trim();
 
+    // Check explicit per-item price: e.g. "at 500 rupees each", "at ₹750", "for 15000 rupees"
     let explicitPrice = null;
-    const priceMatch = seg.match(/(?:at|price|ke bhaav|rate)?\s*(\d+)\s*(?:rupees|rupaye|rs|each|prati)?/i);
-    if (seg.includes('at ') || seg.includes('each') || seg.includes('rate') || seg.includes('price')) {
-      if (priceMatch) {
-        explicitPrice = parseInt(priceMatch[1], 10);
+    const priceMatch = seg.match(/(?:at|price|for|ke bhaav|rate)?\s*₹?\s*(\d+(?:,\d+)*)\s*(?:rupees|rupaye|rs|each|prati|per)?/i);
+    if (seg.includes('at ') || seg.includes('each') || seg.includes('rate') || seg.includes('price') || seg.includes('for ') || seg.includes('₹')) {
+      if (priceMatch && priceMatch[1]) {
+        explicitPrice = parseInt(priceMatch[1].replace(/,/g, ''), 10);
         seg = seg.replace(priceMatch[0], '').trim();
       }
     }
@@ -357,9 +406,9 @@ export const parseVoiceCommand = (rawText, products = [], customers = []) => {
     let searchTarget = remainingWords.join(' ').toLowerCase().trim();
     if (!searchTarget) return;
 
-    // Check grocery alias
-    if (groceryAliases[searchTarget]) {
-      searchTarget = groceryAliases[searchTarget];
+    // Check alias mapping
+    if (commonAliases[searchTarget]) {
+      searchTarget = commonAliases[searchTarget];
     }
 
     // Search against products
@@ -424,6 +473,6 @@ export const parseVoiceCommand = (rawText, products = [], customers = []) => {
   return {
     intent: 'unknown',
     queryText,
-    message: 'Could not understand the command. You can speak products with quantity, e.g. "2 kilo chawal aur ek packet maggi".'
+    message: 'Could not understand the command. You can speak products with quantity, e.g. "Add two shirts at 500 rupees each" or "3 kilo chawal".'
   };
 };

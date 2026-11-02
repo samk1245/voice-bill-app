@@ -650,4 +650,33 @@ router.get('/export-csv/:storeId', authenticate, async (req, res) => {
   }
 });
 
+// 5. Delete an Invoice with Confirmation & Inventory Safety
+router.delete('/:id', authenticate, async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.id);
+    if (!order) {
+      return res.status(404).json({ message: 'Invoice not found.' });
+    }
+
+    // Restore stock if active
+    if (order.status !== 'Cancelled') {
+      for (const item of order.items || []) {
+        if (item.productId && !item.productId.toString().startsWith('custom_')) {
+          const prod = await Product.findById(item.productId);
+          if (prod) {
+            const restoredStock = Number(prod.stock || 0) + Number(item.quantity || 0);
+            await Product.findByIdAndUpdate(item.productId, { stock: restoredStock });
+          }
+        }
+      }
+    }
+
+    await Order.findByIdAndDelete(req.params.id);
+    res.json({ message: `Invoice #${order.invoiceNumber || req.params.id} deleted successfully.`, id: req.params.id });
+  } catch (err) {
+    console.error('Delete invoice error:', err);
+    res.status(500).json({ message: 'Error deleting invoice', error: err.message });
+  }
+});
+
 export default router;

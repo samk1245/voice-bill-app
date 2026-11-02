@@ -29,7 +29,7 @@ const parseNumber = (word) => {
 };
 
 const unitMap = {
-  'kilo': 'kg', 'kg': 'kg', 'kilos': 'kg',
+  'kilo': 'kg', 'kg': 'kg', 'kilos': 'kg', 'kilogram': 'kg',
   'packet': 'packet', 'packets': 'packet', 'pkt': 'packet',
   'bottle': 'bottle', 'bottles': 'bottle',
   'piece': 'piece', 'pieces': 'piece', 'pc': 'piece', 'pcs': 'piece',
@@ -64,7 +64,11 @@ router.post('/parse', async (req, res) => {
       return res.json({ intent: 'action', action: 'print_bill', message: 'Print bill command triggered.' });
     }
 
-    if (queryText.includes('whatsapp') && (queryText.includes('bhejo') || queryText.includes('share'))) {
+    if (queryText.includes('generate the pdf') || queryText.includes('generate pdf') || queryText.includes('download pdf')) {
+      return res.json({ intent: 'action', action: 'generate_pdf', message: 'Download PDF command triggered.' });
+    }
+
+    if (queryText.includes('whatsapp') && (queryText.includes('bhejo') || queryText.includes('share') || queryText.includes('send'))) {
       return res.json({ intent: 'action', action: 'whatsapp_share', message: 'WhatsApp share command triggered.' });
     }
 
@@ -78,12 +82,14 @@ router.post('/parse', async (req, res) => {
 
     // 2. Tax / GST Commands
     if (queryText.includes('gst') || queryText.includes('tax')) {
-      const taxMatch = queryText.match(/(\d+)\s*(?:percent|%)?\s*(?:gst|tax)/);
+      const taxMatch = queryText.match(/(\d+)\s*(?:percent|%|pratishat)?\s*(?:gst|tax)/) ||
+                       queryText.match(/(?:gst|tax)\s*(?:of|at)?\s*(\d+)/);
       if (taxMatch) {
+        const rate = parseInt(taxMatch[1], 10);
         return res.json({
           intent: 'set_tax',
-          taxRate: parseInt(taxMatch[1], 10),
-          message: `Set tax rate to ${taxMatch[1]}% GST.`
+          taxRate: rate,
+          message: `Set tax rate to ${rate}% GST.`
         });
       }
     }
@@ -99,18 +105,19 @@ router.post('/parse', async (req, res) => {
           message: `Applied ${percentMatch[1]}% discount.`
         });
       }
-      const flatMatch = queryText.match(/(\d+)\s*(?:rupees|rupaye|rs)?\s*(?:ka\s*)?(?:discount|chhoot)/);
+
+      const flatMatch = queryText.match(/(?:discount|chhoot)\s*(?:of|amount)?\s*(\d+)/);
       if (flatMatch) {
         return res.json({
           intent: 'apply_discount',
           discountType: 'fixed',
           value: parseInt(flatMatch[1], 10),
-          message: `Applied ₹${flatMatch[1]} discount.`
+          message: `Applied ₹${flatMatch[1]} flat discount.`
         });
       }
     }
 
-    // 4. Multi-item parsing
+    // 4. Multi-item Extraction
     const segments = queryText.split(/\s+aur\s+|\s+and\s+|\s+plus\s+|,\s*/).map(s => s.trim()).filter(Boolean);
     const detectedItems = [];
     const detectedClarifications = [];
@@ -126,8 +133,8 @@ router.post('/parse', async (req, res) => {
       let seg = segment.replace(/^(add|dena|de do|karo|please|daal do)\s+/i, '').trim();
 
       let explicitPrice = null;
-      const priceMatch = seg.match(/(?:at|price|rate)?\s*(\d+)\s*(?:rupees|rupaye|rs|each)?/i);
-      if (seg.includes('at ') || seg.includes('each') || seg.includes('price')) {
+      const priceMatch = seg.match(/(?:at|price|ke bhaav|rate)?\s*(\d+)\s*(?:rupees|rupaye|rs|each|prati)?/i);
+      if (seg.includes('at ') || seg.includes('each') || seg.includes('rate') || seg.includes('price')) {
         if (priceMatch) {
           explicitPrice = parseInt(priceMatch[1], 10);
           seg = seg.replace(priceMatch[0], '').trim();
@@ -232,6 +239,8 @@ router.post('/billmate', async (req, res) => {
 
     const now = new Date();
     const todayStr = now.toISOString().slice(0, 10);
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
 
     // 1. "How much did I sell today?" / "Today's sales"
     if (query.includes('today') && (query.includes('sell') || query.includes('sales') || query.includes('revenue') || query.includes('kamai'))) {
@@ -246,7 +255,38 @@ router.post('/billmate', async (req, res) => {
       });
     }
 
-    // 2. "Which products generated the most revenue?" / "Top selling products"
+    // 2. "How much did I earn this month?" / "Monthly earnings & net profit"
+    if ((query.includes('earn') || query.includes('profit') || query.includes('revenue') || query.includes('sales')) && (query.includes('this month') || query.includes('month'))) {
+      let thisMonthSales = 0;
+      let thisMonthExpenses = 0;
+      let billsCount = 0;
+
+      orders.forEach(o => {
+        if (o.status === 'Cancelled') return;
+        const d = new Date(o.createdAt);
+        if (d.getFullYear() === currentYear && d.getMonth() === currentMonth) {
+          thisMonthSales += Number(o.totalAmount || 0);
+          billsCount++;
+        }
+      });
+
+      expenses.forEach(e => {
+        const d = new Date(e.date || e.createdAt);
+        if (d.getFullYear() === currentYear && d.getMonth() === currentMonth) {
+          thisMonthExpenses += Number(e.amount || 0);
+        }
+      });
+
+      const netProfit = thisMonthSales - thisMonthExpenses;
+      return res.json({
+        type: 'earnings',
+        title: 'Monthly Revenue & Net Profit',
+        answer: `This month, your total revenue is ₹${thisMonthSales.toLocaleString('en-IN')} from ${billsCount} bills.\nRecorded expenses: ₹${thisMonthExpenses.toLocaleString('en-IN')}.\nEstimated Net Earnings: ₹${netProfit.toLocaleString('en-IN')}.`,
+        metrics: { thisMonthSales, thisMonthExpenses, netProfit, billsCount }
+      });
+    }
+
+    // 3. "Which products generated the most revenue?" / "Top selling products"
     if (query.includes('top product') || query.includes('most revenue') || query.includes('best selling') || query.includes('sabse zyada')) {
       const productMap = {};
       orders.forEach(o => {
@@ -268,23 +308,129 @@ router.post('/billmate', async (req, res) => {
       });
     }
 
-    // 3. "Show customers with outstanding payments" / "Pending udhaar"
-    if (query.includes('outstanding') || query.includes('pending') || query.includes('udhaar') || query.includes('credit balance')) {
+    // 4. "Show my top 5 customers" / "Best customers"
+    if (query.includes('top customer') || query.includes('best customer') || query.includes('loyal customer') || query.includes('top 5 customer')) {
+      const customerMap = {};
+      orders.forEach(o => {
+        if (o.status === 'Cancelled' || !o.customerName) return;
+        const key = o.customerPhone ? `${o.customerName} (${o.customerPhone})` : o.customerName;
+        if (!customerMap[key]) customerMap[key] = { name: o.customerName, phone: o.customerPhone || 'N/A', totalSpent: 0, ordersCount: 0 };
+        customerMap[key].totalSpent += Number(o.totalAmount || 0);
+        customerMap[key].ordersCount++;
+      });
+      const topCustomers = Object.values(customerMap).sort((a, b) => b.totalSpent - a.totalSpent).slice(0, 5);
+      const listText = topCustomers.map((c, idx) => `${idx + 1}. ${c.name} (${c.phone}): ₹${c.totalSpent.toLocaleString('en-IN')} (${c.ordersCount} bills)`).join('\n');
+      return res.json({
+        type: 'top_customers',
+        title: 'Top 5 Customers by Lifetime Value',
+        answer: topCustomers.length > 0
+          ? `Here are your top 5 most valuable customers:\n\n${listText}`
+          : 'No customer order history recorded yet.',
+        topCustomers
+      });
+    }
+
+    // 5. "Who has not paid me?" / "What is my outstanding amount?" / "Pending udhaar"
+    if (query.includes('who has not paid') || query.includes('not paid') || query.includes('outstanding') || query.includes('pending') || query.includes('udhaar') || query.includes('credit balance')) {
       const debtors = customers.filter(c => Number(c.pendingCredit || 0) > 0);
+      const unpaidOrders = orders.filter(o => o.status !== 'Cancelled' && (o.paymentStatus === 'Unpaid' || o.paymentStatus === 'Partially Paid'));
       const totalPending = debtors.reduce((sum, c) => sum + Number(c.pendingCredit || 0), 0);
       const debtorList = debtors.map(c => `• ${c.name} (${c.mobile || 'No Phone'}): ₹${Number(c.pendingCredit).toLocaleString('en-IN')}`).join('\n');
       return res.json({
         type: 'debtors',
-        title: 'Outstanding Customer Balances',
-        answer: debtors.length > 0
-          ? `You have ${debtors.length} customer(s) with a total outstanding balance of ₹${totalPending.toLocaleString('en-IN')}:\n\n${debtorList}`
-          : 'Great news! There are currently no pending customer credit balances.',
+        title: 'Outstanding Customer Balances & Unpaid Invoices',
+        answer: debtors.length > 0 || unpaidOrders.length > 0
+          ? `You have ${debtors.length} customer(s) with an outstanding ledger balance totaling ₹${totalPending.toLocaleString('en-IN')}, and ${unpaidOrders.length} unpaid/partial invoice(s).\n\nCustomer Ledgers:\n${debtorList || 'None in ledger'}`
+          : 'Great news! There are currently no pending customer credit balances or overdue invoices.',
         totalPending,
+        debtors,
+        unpaidOrdersCount: unpaidOrders.length
+      });
+    }
+
+    // 6. "Predict next month's revenue" / "Revenue forecast"
+    if (query.includes('predict') || query.includes('forecast') || query.includes('future revenue') || query.includes('next month revenue')) {
+      const dayCount = now.getDate();
+      let mtdSales = 0;
+      orders.forEach(o => {
+        if (o.status === 'Cancelled') return;
+        const d = new Date(o.createdAt);
+        if (d.getFullYear() === currentYear && d.getMonth() === currentMonth) {
+          mtdSales += Number(o.totalAmount || 0);
+        }
+      });
+
+      const avgDaily = dayCount > 0 ? mtdSales / dayCount : 0;
+      const predictedNextMonth = Math.round(avgDaily * 30);
+      const lowerBound = Math.round(predictedNextMonth * 0.9);
+      const upperBound = Math.round(predictedNextMonth * 1.15);
+
+      return res.json({
+        type: 'prediction',
+        title: "AI Predictive Revenue Forecast",
+        answer: `Based on your current month-to-date run rate (₹${Math.round(avgDaily).toLocaleString('en-IN')}/day across ${dayCount} days), your estimated revenue for next month is:\n\n🎯 Expected: ₹${predictedNextMonth.toLocaleString('en-IN')}\n📈 Confidence Range: ₹${lowerBound.toLocaleString('en-IN')} - ₹${upperBound.toLocaleString('en-IN')}\n\nTip: You can boost this by sending WhatsApp payment reminders to overdue customers.`,
+        predictedNextMonth,
+        avgDaily,
+        lowerBound,
+        upperBound
+      });
+    }
+
+    // 7. "Detect unusual billing patterns" / "Anomalies"
+    if (query.includes('unusual') || query.includes('pattern') || query.includes('anomaly') || query.includes('fraud') || query.includes('risk')) {
+      const cancelledCount = orders.filter(o => o.status === 'Cancelled').length;
+      const cancellationRatio = orders.length > 0 ? Math.round((cancelledCount / orders.length) * 100) : 0;
+      const overdueDebtors = customers.filter(c => Number(c.pendingCredit || 0) > 5000);
+      
+      let findings = [];
+      if (cancellationRatio > 10) {
+        findings.push(`⚠️ Cancellation rate is elevated at ${cancellationRatio}% (${cancelledCount} cancelled bills).`);
+      }
+      if (overdueDebtors.length > 0) {
+        findings.push(`⚠️ ${overdueDebtors.length} customer(s) carry high individual credit over ₹5,000.`);
+      }
+      if (findings.length === 0) {
+        findings.push('✅ No abnormal billing spikes or unusual fraud patterns detected.');
+        findings.push(`✅ Cancellation rate is low and healthy (${cancellationRatio}%).`);
+      }
+
+      return res.json({
+        type: 'pattern_detection',
+        title: 'Billing Health & Pattern Analysis',
+        answer: findings.join('\n\n'),
+        cancellationRatio,
+        overdueHighDebtors: overdueDebtors.length
+      });
+    }
+
+    // 8. "Recommend payment follow-ups" / "Follow up suggestions"
+    if (query.includes('follow up') || query.includes('recommend') || query.includes('who should i call') || query.includes('remind')) {
+      const debtors = customers
+        .filter(c => Number(c.pendingCredit || 0) > 0)
+        .sort((a, b) => Number(b.pendingCredit) - Number(a.pendingCredit))
+        .slice(0, 5);
+
+      if (debtors.length === 0) {
+        return res.json({
+          type: 'recommendations',
+          title: 'Payment Follow-up Recommendations',
+          answer: 'All customer accounts are settled! No urgent payment follow-ups required.'
+        });
+      }
+
+      const suggestions = debtors.map((c, i) => {
+        return `${i + 1}. ${c.name} — Pending: ₹${Number(c.pendingCredit).toLocaleString('en-IN')} (Phone: ${c.mobile || 'N/A'})\n   Action: Send WhatsApp reminder with UPI payment link.`;
+      }).join('\n\n');
+
+      return res.json({
+        type: 'recommendations',
+        title: 'Recommended Customer Payment Follow-ups',
+        answer: `Here are the top ${debtors.length} priority follow-ups to recover outstanding dues:\n\n${suggestions}`,
         debtors
       });
     }
 
-    // 4. "Low stock" / "Out of stock"
+    // 9. "Low stock" / "Out of stock"
     if (query.includes('low stock') || query.includes('out of stock') || query.includes('khatam') || query.includes('inventory alert')) {
       const lowStock = products.filter(p => !p.isService && Number(p.stock || 0) <= Number(p.lowStockAlertLimit || 10));
       const list = lowStock.map(p => `• ${p.name}: ${p.stock} ${p.unit || 'pcs'} left (alert limit: ${p.lowStockAlertLimit})`).join('\n');
@@ -298,10 +444,8 @@ router.post('/billmate', async (req, res) => {
       });
     }
 
-    // 5. "Compare this month with last month" / "Monthly comparison"
+    // 10. "Compare this month with last month" / "Monthly comparison"
     if (query.includes('compare') || query.includes('last month') || query.includes('month comparison')) {
-      const currentMonth = now.getMonth();
-      const currentYear = now.getFullYear();
       let thisMonthSales = 0;
       let lastMonthSales = 0;
 
@@ -326,8 +470,7 @@ router.post('/billmate', async (req, res) => {
       });
     }
 
-    // 6. Natural Language Expense Log: "Log expense 500 for electricity"
-    const expenseMatch = query.match(/(?:log|add|record|kharcha)?\s*(?:expense|kharcha)?\s*(?:of|rs|rupees)?\s*(\d+)\s*(?:for|on|ka)?\s*(.+)/i);
+    // 11. Natural Language Expense Log: "Log expense 500 for electricity"
     if (query.includes('expense') || query.includes('kharcha')) {
       const amountMatch = query.match(/(\d+)/);
       if (amountMatch) {
@@ -363,7 +506,7 @@ router.post('/billmate', async (req, res) => {
     return res.json({
       type: 'general',
       title: 'BillMate AI Assistant',
-      answer: `I'm BillMate AI, your billing & analytics copilot. You can ask me:\n• "How much did I sell today?"\n• "Which products generated the most revenue?"\n• "Show customers with outstanding payments"\n• "Check low stock alerts"\n• "Compare this month with last month"\n• "Log expense of 500 for packing materials"`
+      answer: `I'm BillMate AI, your billing & analytics copilot. You can ask me:\n• "How much did I earn this month?"\n• "Who has not paid me?"\n• "Which products generated the most revenue?"\n• "Show my top 5 customers"\n• "What is my outstanding amount?"\n• "Predict next month's revenue"\n• "Detect unusual billing patterns"\n• "Recommend payment follow-ups"\n• "Log expense 500 for packing"`
     });
   } catch (err) {
     console.error('BillMate AI error:', err);

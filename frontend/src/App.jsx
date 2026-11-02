@@ -6,6 +6,9 @@ import { store } from './store/index.js';
 // Auth Views
 import Login from './pages/Auth/Login.jsx';
 
+// SaaS Views
+import LandingPage from './pages/SaaS/LandingPage.jsx';
+
 // Dashboards
 import VendorDashboard from './pages/Dashboards/VendorDashboard.jsx';
 
@@ -16,7 +19,7 @@ function ProtectedRoute({ children }) {
 
 function RootRedirect() {
   const { isAuthenticated } = useSelector(state => state.auth);
-  return isAuthenticated ? <Navigate to="/vendor/dashboard" replace /> : <Navigate to="/login" replace />;
+  return isAuthenticated ? <Navigate to="/vendor/dashboard" replace /> : <LandingPage />;
 }
 
 export default function App() {
@@ -26,6 +29,7 @@ export default function App() {
         <Routes>
           {/* Main Routing */}
           <Route path="/" element={<RootRedirect />} />
+          <Route path="/landing" element={<LandingPage />} />
           <Route path="/login" element={<Login />} />
           
           <Route 
