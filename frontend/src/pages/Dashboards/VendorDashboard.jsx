@@ -44,7 +44,7 @@ import {
   Receipt, Wallet, CheckSquare, RefreshCcw, Wifi, WifiOff
 } from 'lucide-react';
 
-const CHART_COLORS = ['#7c3aed', '#38bdf8', '#10b981', '#f59e0b', '#ec4899', '#6366f1'];
+const CHART_COLORS = ['#713CFF', '#287BFF', '#00E5FF', '#B69CFF', '#10b981', '#f59e0b'];
 
 export default function VendorDashboard() {
   const { user, token } = useSelector(state => state.auth);
@@ -1181,7 +1181,7 @@ export default function VendorDashboard() {
   };
 
   return (
-    <div className={`min-h-screen ${darkMode ? 'dark' : ''} bg-slate-50 dark:bg-navy-900 text-slate-800 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200`}>
+    <div className={`min-h-screen ${darkMode ? 'dark' : ''} bg-[#F8FAFF] dark:bg-[#080B1A] text-slate-800 dark:text-[#F8FAFF] flex flex-col font-sans transition-colors duration-300`}>
       
       {/* 1. COLLAPSIBLE SIDEBAR */}
       <Sidebar
@@ -1456,14 +1456,14 @@ export default function VendorDashboard() {
           {activeTab === 'billing' && (
             <div className="space-y-6 animate-fade-in">
               {/* Top Banner: Voice Microphone Bar & Quick Fill */}
-              <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-violet-900 via-indigo-900 to-navy-950 text-white shadow-xl flex flex-col md:flex-row items-center justify-between gap-4 border border-violet-700/40 relative overflow-hidden">
+              <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-[#1B0D3D] via-[#131B38] to-[#080B1A] text-white shadow-glow-purple flex flex-col md:flex-row items-center justify-between gap-4 border border-[#713CFF]/40 backdrop-blur-2xl relative overflow-hidden">
                 <div className="flex items-center gap-4 z-10 w-full md:w-auto">
                   <button
                     onClick={toggleRecording}
                     className={`h-14 w-14 min-w-14 rounded-2xl flex items-center justify-center transition-all duration-200 active:scale-95 shadow-xl ${
                       isRecording 
                         ? 'bg-rose-600 text-white ring-4 ring-rose-400/50 animate-pulse' 
-                        : 'bg-violet-600 hover:bg-violet-500 text-white shadow-glow-violet'
+                        : 'btn-gradient-primary text-white shadow-glow-purple'
                     }`}
                   >
                     {isRecording ? <MicOff className="h-7 w-7" /> : <Mic className="h-7 w-7" />}

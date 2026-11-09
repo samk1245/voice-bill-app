@@ -63,27 +63,27 @@ export default function Sidebar({
     <aside 
       className={`fixed top-0 left-0 z-40 h-screen transition-all duration-300 flex flex-col ${
         collapsed ? 'w-20' : 'w-64'
-      } bg-navy-950 text-slate-200 border-r border-navy-800 shadow-xl select-none`}
+      } bg-[#080B1A] text-[#F8FAFF] border-r border-white/[0.08] shadow-2xl select-none`}
     >
       {/* Brand Header */}
-      <div className="h-16 flex items-center justify-between px-4 border-b border-navy-800/80 bg-navy-900/50">
+      <div className="h-16 flex items-center justify-between px-4 border-b border-white/[0.08] bg-[#050711]/60 backdrop-blur-xl">
         <div className="flex items-center gap-3 overflow-hidden">
-          <div className="h-10 w-10 min-w-10 rounded-xl bg-gradient-to-tr from-violet-600 to-indigo-500 flex items-center justify-center shadow-glow-violet text-white font-black text-lg">
-            <Mic className="h-5 w-5" />
+          <div className="h-10 w-10 min-w-10 rounded-2xl bg-gradient-to-tr from-[#713CFF] via-[#287BFF] to-[#00E5FF] flex items-center justify-center shadow-glow-purple text-white font-black text-lg">
+            <Mic className="h-5 w-5 text-white" />
           </div>
           {!collapsed && (
             <div className="truncate">
-              <span className="font-bold text-base text-white tracking-tight flex items-center gap-1.5">
-                VoiceBill <span className="text-violet-400 font-extrabold text-xs px-1.5 py-0.5 rounded bg-violet-950/80 border border-violet-800/60">AI 2.0</span>
+              <span className="font-extrabold text-base text-[#F8FAFF] tracking-tight flex items-center gap-1.5 font-display">
+                VoiceBill <span className="text-[#00E5FF] font-black text-[10px] px-1.5 py-0.5 rounded-full bg-[#00E5FF]/10 border border-[#00E5FF]/30">AI</span>
               </span>
-              <p className="text-[11px] text-slate-400 truncate">Universal Billing OS</p>
+              <p className="text-[11px] text-[#B69CFF]/80 truncate">Universal Billing OS</p>
             </div>
           )}
         </div>
 
         <button 
           onClick={() => setCollapsed(!collapsed)}
-          className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-navy-800 transition"
+          className="p-1.5 rounded-xl text-[#B69CFF] hover:text-[#F8FAFF] hover:bg-white/[0.06] transition"
           title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
           {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
@@ -92,13 +92,13 @@ export default function Sidebar({
 
       {/* Active Shop Profile Indicator */}
       {!collapsed && selectedStore && (
-        <div className="px-3.5 py-2.5 mx-3 mt-3 rounded-xl bg-navy-900/80 border border-navy-800 text-xs">
+        <div className="px-3.5 py-2.5 mx-3 mt-3 rounded-2xl bg-white/[0.03] border border-white/[0.08] text-xs backdrop-blur-xl">
           <div className="flex items-center justify-between">
-            <span className="text-slate-400 font-medium truncate flex items-center gap-1.5">
-              <Store className="h-3.5 w-3.5 text-softblue-500" />
+            <span className="text-[#F8FAFF] font-semibold truncate flex items-center gap-1.5">
+              <Store className="h-3.5 w-3.5 text-[#00E5FF]" />
               {selectedStore.name}
             </span>
-            <span className="px-1.5 py-0.5 rounded text-[10px] bg-violet-950 text-violet-300 font-semibold border border-violet-800/60">
+            <span className="px-2 py-0.5 rounded-full text-[10px] bg-[#713CFF]/20 text-[#B69CFF] font-bold border border-[#713CFF]/40">
               {selectedStore.category || 'Universal'}
             </span>
           </div>
@@ -110,7 +110,7 @@ export default function Sidebar({
         {navSections.map((section, sIdx) => (
           <div key={sIdx} className="space-y-1">
             {!collapsed && (
-              <p className="px-2.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
+              <p className="px-2.5 text-[10px] font-bold text-[#B69CFF]/60 uppercase tracking-widest mb-1">
                 {section.group}
               </p>
             )}
@@ -122,20 +122,20 @@ export default function Sidebar({
                   key={item.id}
                   onClick={() => setActiveTab(item.id)}
                   title={collapsed ? item.label : undefined}
-                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all duration-150 ${
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 ${
                     isActive 
-                      ? 'bg-violet-600 text-white shadow-glow-violet font-semibold' 
+                      ? 'btn-gradient-primary text-white shadow-glow-purple font-bold' 
                       : item.highlight
-                      ? 'text-violet-300 hover:bg-violet-950/40 hover:text-white'
-                      : 'text-slate-300 hover:bg-navy-900 hover:text-white'
+                      ? 'text-[#B69CFF] hover:bg-[#713CFF]/10 hover:text-[#F8FAFF] border border-[#713CFF]/20'
+                      : 'text-[#B69CFF]/80 hover:bg-white/[0.04] hover:text-[#F8FAFF]'
                   }`}
                 >
-                  <Icon className={`h-4 w-4 min-w-4 ${isActive ? 'text-white' : item.highlight ? 'text-violet-400' : 'text-slate-400'}`} />
+                  <Icon className={`h-4 w-4 min-w-4 ${isActive ? 'text-white' : item.highlight ? 'text-[#00E5FF]' : 'text-[#B69CFF]'}`} />
                   {!collapsed && (
                     <span className="flex-1 text-left truncate">{item.label}</span>
                   )}
                   {!collapsed && item.badge && (
-                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-violet-400 text-navy-950">
+                    <span className="px-1.5 py-0.5 rounded-md text-[10px] font-black bg-[#00E5FF] text-[#080B1A]">
                       {item.badge}
                     </span>
                   )}
@@ -147,22 +147,22 @@ export default function Sidebar({
       </nav>
 
       {/* Footer Profile & Logout */}
-      <div className="p-3 border-t border-navy-800 bg-navy-900/60">
+      <div className="p-3 border-t border-white/[0.08] bg-[#050711]/80 backdrop-blur-xl">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2.5 overflow-hidden">
-            <div className="h-8 w-8 min-w-8 rounded-full bg-navy-800 border border-navy-700 flex items-center justify-center font-bold text-xs text-softblue-500">
+            <div className="h-8 w-8 min-w-8 rounded-xl bg-gradient-to-tr from-[#713CFF] to-[#287BFF] flex items-center justify-center font-extrabold text-xs text-white shadow-sm">
               {(user?.name || 'U').charAt(0).toUpperCase()}
             </div>
             {!collapsed && (
               <div className="truncate">
-                <p className="text-xs font-semibold text-white truncate">{user?.name || 'Store Owner'}</p>
-                <p className="text-[10px] text-slate-400 capitalize">{activeRole} Role</p>
+                <p className="text-xs font-bold text-[#F8FAFF] truncate">{user?.name || 'Store Owner'}</p>
+                <p className="text-[10px] text-[#B69CFF] capitalize">{activeRole} Role</p>
               </div>
             )}
           </div>
           <button 
             onClick={onLogout}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-navy-800 transition"
+            className="p-1.5 rounded-xl text-[#B69CFF] hover:text-rose-400 hover:bg-rose-500/10 transition"
             title="Sign out"
           >
             <LogOut className="h-4 w-4" />

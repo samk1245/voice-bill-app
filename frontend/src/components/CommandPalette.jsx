@@ -42,7 +42,7 @@ export default function CommandPalette({
           subtitle: 'Activate microphone to speak items, prices & discounts',
           icon: Mic,
           badge: 'Voice',
-          color: 'from-violet-500 to-fuchsia-500',
+          color: 'from-[#713CFF] to-[#00E5FF]',
           action: () => {
             setActiveTab('billing');
             onStartVoice?.();
@@ -55,7 +55,7 @@ export default function CommandPalette({
           subtitle: 'Open blank cart and start a fresh invoice',
           icon: Plus,
           badge: 'N',
-          color: 'from-blue-500 to-cyan-500',
+          color: 'from-[#287BFF] to-[#00E5FF]',
           action: () => {
             setActiveTab('billing');
             onNewBill?.();
@@ -68,7 +68,7 @@ export default function CommandPalette({
           subtitle: 'Close register, calculate expected vs counted cash (Z-Report)',
           icon: Wallet,
           badge: 'Z-Report',
-          color: 'from-emerald-500 to-teal-500',
+          color: 'from-emerald-500 to-teal-400',
           action: () => {
             onOpenCashDrawer?.();
             onClose();
@@ -80,7 +80,7 @@ export default function CommandPalette({
           subtitle: 'Choose between 12 industry catalog templates',
           icon: Store,
           badge: '12 Profiles',
-          color: 'from-amber-500 to-orange-500',
+          color: 'from-amber-500 to-orange-400',
           action: () => {
             onOpenTemplateModal?.();
             onClose();
@@ -110,7 +110,7 @@ export default function CommandPalette({
           title: 'How much did I sell today?',
           subtitle: 'Get instant summary of today\'s orders & revenue',
           icon: Sparkles,
-          color: 'from-purple-500 to-indigo-500',
+          color: 'from-[#713CFF] to-[#287BFF]',
           action: () => {
             setActiveTab('billmate');
             onAskBillMate?.('How much did I sell today?');
@@ -134,7 +134,7 @@ export default function CommandPalette({
           title: 'Predict next month\'s revenue',
           subtitle: 'Run predictive linear velocity model on recent billing data',
           icon: TrendingUp,
-          color: 'from-cyan-500 to-blue-500',
+          color: 'from-[#00E5FF] to-[#287BFF]',
           action: () => {
             setActiveTab('billmate');
             onAskBillMate?.('Predict next month\'s revenue');
@@ -221,14 +221,14 @@ export default function CommandPalette({
   let currentItemCounter = 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-16 sm:pt-24 px-4 bg-slate-950/70 backdrop-blur-md transition-opacity animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-16 sm:pt-24 px-4 bg-[#080B1A]/80 backdrop-blur-xl transition-opacity animate-in fade-in duration-200">
       <div 
-        className="w-full max-w-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-violet-500/30 rounded-2xl shadow-2xl overflow-hidden transition-all duration-200 dark:shadow-[0_0_50px_rgba(139,92,246,0.25)]"
+        className="w-full max-w-2xl bg-[#080B1A]/95 border border-white/[0.12] rounded-3xl shadow-glow-multi overflow-hidden transition-all duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Search Input Bar */}
-        <div className="relative flex items-center px-4 py-3.5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/80">
-          <Search className="h-5 w-5 text-violet-500 mr-3 shrink-0" />
+        <div className="relative flex items-center px-4 py-4 border-b border-white/[0.08] bg-[#0D1226]/80">
+          <Search className="h-5 w-5 text-[#00E5FF] mr-3 shrink-0" />
           <input
             ref={inputRef}
             type="text"
@@ -238,34 +238,34 @@ export default function CommandPalette({
               setQuery(e.target.value);
               setSelectedIndex(0);
             }}
-            className="w-full bg-transparent text-sm sm:text-base font-medium text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none"
+            className="w-full bg-transparent text-sm sm:text-base font-semibold text-[#F8FAFF] placeholder-[#B69CFF]/50 focus:outline-none"
           />
           {query ? (
             <button 
               onClick={() => setQuery('')}
-              className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              className="p-1 rounded-lg text-[#B69CFF] hover:text-[#F8FAFF]"
             >
               <X className="h-4 w-4" />
             </button>
           ) : (
-            <kbd className="hidden sm:inline-block px-2 py-0.5 text-[11px] font-mono text-slate-400 bg-slate-200 dark:bg-slate-800 rounded border border-slate-300 dark:border-slate-700">
+            <kbd className="hidden sm:inline-block px-2 py-0.5 text-[11px] font-mono text-[#B69CFF] bg-white/[0.06] rounded-md border border-white/[0.1]">
               ESC
             </kbd>
           )}
         </div>
 
         {/* Results List */}
-        <div className="max-h-[60vh] overflow-y-auto p-2 divide-y divide-slate-100 dark:divide-slate-800/60">
+        <div className="max-h-[60vh] overflow-y-auto p-2.5 divide-y divide-white/[0.04]">
           {flatList.length === 0 ? (
-            <div className="py-12 text-center text-slate-500 dark:text-slate-400">
-              <Search className="h-8 w-8 mx-auto text-slate-300 dark:text-slate-600 mb-2" />
-              <p className="text-sm font-medium">No matching commands found</p>
-              <p className="text-xs text-slate-400 mt-1">Try searching for 'voice', 'bill', 'customer' or 'settings'</p>
+            <div className="py-12 text-center text-[#B69CFF]/60">
+              <Search className="h-8 w-8 mx-auto text-[#B69CFF]/30 mb-2" />
+              <p className="text-sm font-semibold text-[#F8FAFF]">No matching commands found</p>
+              <p className="text-xs text-[#B69CFF]/60 mt-1">Try searching for 'voice', 'bill', 'customer' or 'settings'</p>
             </div>
           ) : (
             filteredCommands.map((group) => (
               <div key={group.group} className="py-2">
-                <div className="px-3 py-1 text-[11px] font-bold tracking-wider uppercase text-slate-400 dark:text-slate-500">
+                <div className="px-3 py-1 text-[11px] font-extrabold tracking-widest uppercase text-[#B69CFF]/60">
                   {group.group}
                 </div>
                 <div className="space-y-1 mt-1">
@@ -288,28 +288,28 @@ export default function CommandPalette({
                           }
                         }}
                         onMouseEnter={() => setSelectedIndex(thisIndex)}
-                        className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-left transition-all duration-150 ${
+                        className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-left transition-all duration-150 ${
                           isSelected
-                            ? 'bg-violet-600 text-white shadow-md shadow-violet-500/20'
-                            : 'hover:bg-slate-100 dark:hover:bg-slate-800/80 text-slate-700 dark:text-slate-200'
+                            ? 'btn-gradient-primary text-white shadow-glow-purple'
+                            : 'hover:bg-white/[0.04] text-[#B69CFF] hover:text-[#F8FAFF]'
                         }`}
                       >
                         <div className="flex items-center gap-3 min-w-0">
-                          <div className={`p-2 rounded-lg shrink-0 ${
+                          <div className={`p-2 rounded-xl shrink-0 ${
                             isSelected 
                               ? 'bg-white/20 text-white' 
-                              : 'bg-violet-50 dark:bg-slate-800 text-violet-600 dark:text-violet-400'
+                              : 'bg-white/[0.04] text-[#00E5FF]'
                           }`}>
                             <Icon className="h-4 w-4" />
                           </div>
                           <div className="truncate">
-                            <div className="text-xs sm:text-sm font-semibold truncate flex items-center gap-2">
-                              {item.title}
+                            <div className="text-xs sm:text-sm font-bold truncate flex items-center gap-2">
+                              <span>{item.title}</span>
                               {item.badge && (
-                                <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
                                   isSelected 
                                     ? 'bg-white/30 text-white' 
-                                    : 'bg-violet-100 dark:bg-violet-900/60 text-violet-700 dark:text-violet-300'
+                                    : 'bg-[#00E5FF]/20 text-[#00E5FF] border border-[#00E5FF]/40'
                                 }`}>
                                   {item.badge}
                                 </span>
@@ -317,7 +317,7 @@ export default function CommandPalette({
                             </div>
                             {item.subtitle && (
                               <div className={`text-[11px] truncate ${
-                                isSelected ? 'text-white/80' : 'text-slate-400 dark:text-slate-400'
+                                isSelected ? 'text-white/80' : 'text-[#B69CFF]/60'
                               }`}>
                                 {item.subtitle}
                               </div>
@@ -338,14 +338,14 @@ export default function CommandPalette({
         </div>
 
         {/* Footer Navigation Hints */}
-        <div className="px-4 py-2.5 bg-slate-50 dark:bg-slate-900/90 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-400">
+        <div className="px-4 py-3 bg-[#0D1226]/80 border-t border-white/[0.08] flex items-center justify-between text-[11px] text-[#B69CFF]/60">
           <div className="flex items-center gap-3">
-            <span><kbd className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 font-mono text-[10px]">↑</kbd> <kbd className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 font-mono text-[10px]">↓</kbd> to navigate</span>
-            <span><kbd className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 font-mono text-[10px]">↵</kbd> to select</span>
+            <span><kbd className="px-1.5 py-0.5 rounded bg-white/[0.06] border border-white/[0.1] font-mono text-[10px]">↑</kbd> <kbd className="px-1.5 py-0.5 rounded bg-white/[0.06] border border-white/[0.1] font-mono text-[10px]">↓</kbd> navigate</span>
+            <span><kbd className="px-1.5 py-0.5 rounded bg-white/[0.06] border border-white/[0.1] font-mono text-[10px]">↵</kbd> select</span>
           </div>
-          <div className="flex items-center gap-1.5 text-violet-500 font-semibold">
-            <Sparkles className="h-3 w-3" />
-            <span>VoiceBill AI Command Center</span>
+          <div className="flex items-center gap-1.5 text-[#00E5FF] font-bold">
+            <Sparkles className="h-3.5 w-3.5" />
+            <span>VoiceBill Command Hub</span>
           </div>
         </div>
       </div>
