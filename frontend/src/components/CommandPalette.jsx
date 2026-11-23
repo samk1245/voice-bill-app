@@ -3,7 +3,7 @@ import {
   Search, Mic, Plus, FileText, ShoppingCart, Package, 
   Users, BarChart3, Settings, Moon, Sun, Download, 
   HelpCircle, Sparkles, ArrowRight, X, QrCode, 
-  TrendingUp, AlertTriangle, Wallet, Store, Layers
+  TrendingUp, AlertTriangle, Wallet, Store, Layers, Tag
 } from 'lucide-react';
 
 export default function CommandPalette({
@@ -17,6 +17,7 @@ export default function CommandPalette({
   onNewBill,
   onOpenCashDrawer,
   onOpenTemplateModal,
+  onOpenPriceChecker,
   onAskBillMate,
   onExportCSV
 }) {
@@ -36,6 +37,18 @@ export default function CommandPalette({
     {
       group: 'Quick Actions',
       items: [
+        {
+          id: 'price_check',
+          title: 'Instant Price & Stock Checker',
+          subtitle: 'Look up barcode, selling price, gross margin & stock (Ctrl+P)',
+          icon: Tag,
+          badge: '^P',
+          color: 'from-blue-600 to-cyan-500',
+          action: () => {
+            onOpenPriceChecker?.();
+            onClose();
+          }
+        },
         {
           id: 'voice_bill',
           title: 'Start Voice Billing',

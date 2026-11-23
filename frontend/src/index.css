@@ -4,12 +4,126 @@
 
 @layer base {
   :root {
-    --color-midnight: #080B1A;
-    --color-purple: #713CFF;
-    --color-blue: #287BFF;
-    --color-cyan: #00E5FF;
-    --color-lavender: #B69CFF;
-    --color-white: #F8FAFF;
+    /* Base Neutral Palette */
+    --color-bg-base: #F8FAFC;
+    --color-surface-base: #FFFFFF;
+    --color-border-base: #E2E8F0;
+    --color-text-main: #0F172A;
+    --color-text-muted: #64748B;
+
+    /* Functional Palette 1: Billing & POS (Deep Navy + Warm White + Electric Blue) */
+    --billing-bg: #FFFFFF;
+    --billing-surface: #F8FAFC;
+    --billing-border: #E2E8F0;
+    --billing-text: #0F172A;
+    --billing-muted: #64748B;
+    --billing-accent: #2563EB;
+    --billing-accent-hover: #1D4ED8;
+
+    /* Functional Palette 2: Financial Analytics (Forest Green + Ivory + Muted Gold) */
+    --analytics-bg: #FCFDF9;
+    --analytics-surface: #F3F7F0;
+    --analytics-border: #D1E7D0;
+    --analytics-text: #064E3B;
+    --analytics-muted: #3D6C58;
+    --analytics-accent: #059669;
+    --analytics-gold: #D97706;
+
+    /* Functional Palette 3: Voice Interaction (Charcoal + Soft Orange + Cream) */
+    --voice-bg: #FAF8F5;
+    --voice-surface: #F5EFEB;
+    --voice-border: #E8DED6;
+    --voice-text: #18181B;
+    --voice-muted: #71717A;
+    --voice-accent: #EA580C;
+    --voice-accent-hover: #C2410C;
+
+    /* Functional Palette 4: Invoices & Receipts (Burgundy + Warm Grey + Champagne) */
+    --invoice-bg: #FFFDFD;
+    --invoice-surface: #FBF4F5;
+    --invoice-border: #F3D9DE;
+    --invoice-text: #881337;
+    --invoice-muted: #9F1239;
+    --invoice-accent: #BE123C;
+    --invoice-champagne: #FDE047;
+
+    /* Functional Palette 5: Business Performance & Cashflow (Slate + Emerald + White) */
+    --cashflow-bg: #F8FAFC;
+    --cashflow-surface: #F1F5F9;
+    --cashflow-border: #CBD5E1;
+    --cashflow-text: #1E293B;
+    --cashflow-muted: #475569;
+    --cashflow-emerald: #10B981;
+
+    /* Functional Palette 6: Product & Inventory (Terracotta + Sand + Dark Brown) */
+    --inventory-bg: #FEFDFB;
+    --inventory-surface: #FAF4EB;
+    --inventory-border: #EDE0CE;
+    --inventory-text: #451A03;
+    --inventory-muted: #78350F;
+    --inventory-accent: #9A3412;
+    --inventory-sand: #D97706;
+  }
+
+  .dark {
+    --color-bg-base: #0B0F19;
+    --color-surface-base: #111827;
+    --color-border-base: #1F2937;
+    --color-text-main: #F9FAFB;
+    --color-text-muted: #9CA3AF;
+
+    /* Functional Palette 1: Billing & POS (Deep Navy + Warm White + Electric Blue) */
+    --billing-bg: #0A0F1D;
+    --billing-surface: #10182E;
+    --billing-border: #1E293B;
+    --billing-text: #F8FAFC;
+    --billing-muted: #94A3B8;
+    --billing-accent: #3B82F6;
+    --billing-accent-hover: #60A5FA;
+
+    /* Functional Palette 2: Financial Analytics (Forest Green + Ivory + Muted Gold) */
+    --analytics-bg: #071A14;
+    --analytics-surface: #0C2820;
+    --analytics-border: #143F33;
+    --analytics-text: #E6F4EA;
+    --analytics-muted: #86EFAC;
+    --analytics-accent: #10B981;
+    --analytics-gold: #F59E0B;
+
+    /* Functional Palette 3: Voice Interaction (Charcoal + Soft Orange + Cream) */
+    --voice-bg: #121316;
+    --voice-surface: #18191E;
+    --voice-border: #27272A;
+    --voice-text: #FAF8F5;
+    --voice-muted: #A1A1AA;
+    --voice-accent: #F97316;
+    --voice-accent-hover: #FB923C;
+
+    /* Functional Palette 4: Invoices & Receipts (Burgundy + Warm Grey + Champagne) */
+    --invoice-bg: #15090E;
+    --invoice-surface: #200E16;
+    --invoice-border: #3A1827;
+    --invoice-text: #FFE4E6;
+    --invoice-muted: #FDA4AF;
+    --invoice-accent: #F43F5E;
+    --invoice-champagne: #FDE68A;
+
+    /* Functional Palette 5: Business Performance & Cashflow (Slate + Emerald + White) */
+    --cashflow-bg: #0B1120;
+    --cashflow-surface: #111B30;
+    --cashflow-border: #1E293B;
+    --cashflow-text: #F8FAFC;
+    --cashflow-muted: #94A3B8;
+    --cashflow-emerald: #34D399;
+
+    /* Functional Palette 6: Product & Inventory (Terracotta + Sand + Dark Brown) */
+    --inventory-bg: #140D08;
+    --inventory-surface: #1F150D;
+    --inventory-border: #372314;
+    --inventory-text: #FFF7ED;
+    --inventory-muted: #FDBA74;
+    --inventory-accent: #EA580C;
+    --inventory-sand: #FBBF24;
   }
 
   html {
@@ -18,82 +132,105 @@
   }
 
   body {
-    @apply antialiased transition-colors duration-300;
+    @apply antialiased transition-colors duration-200;
     font-family: 'Plus Jakarta Sans', 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
-    background-color: #080B1A;
-    color: #F8FAFF;
+    background-color: var(--color-bg-base);
+    color: var(--color-text-main);
   }
 
   ::selection {
-    background: #713CFF;
-    color: #F8FAFF;
+    background: #2563EB;
+    color: #FFFFFF;
   }
 }
 
-/* Glassmorphism & Neon Glow Utilities */
+/* Crisp Enterprise SaaS Panels & Cards (Stripe / Linear Quality) */
 @layer components {
+  .saas-card {
+    background-color: #FFFFFF;
+    border: 1px solid #E2E8F0;
+    box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.05), 0 1px 2px -1px rgba(15, 23, 42, 0.05);
+    border-radius: 1rem;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .dark .saas-card {
+    background-color: #111827;
+    border-color: #1F2937;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.3);
+  }
+
+  .saas-card:hover {
+    border-color: #CBD5E1;
+    box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.08), 0 2px 4px -2px rgba(15, 23, 42, 0.06);
+  }
+  .dark .saas-card:hover {
+    border-color: #374151;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
+  }
+
+  /* Functional Section Zones */
+  .zone-billing {
+    background-color: var(--billing-bg);
+    border-color: var(--billing-border);
+    color: var(--billing-text);
+  }
+
+  .zone-analytics {
+    background-color: var(--analytics-bg);
+    border-color: var(--analytics-border);
+    color: var(--analytics-text);
+  }
+
+  .zone-voice {
+    background-color: var(--voice-bg);
+    border-color: var(--voice-border);
+    color: var(--voice-text);
+  }
+
+  .zone-invoice {
+    background-color: var(--invoice-bg);
+    border-color: var(--invoice-border);
+    color: var(--invoice-text);
+  }
+
+  .zone-cashflow {
+    background-color: var(--cashflow-bg);
+    border-color: var(--cashflow-border);
+    color: var(--cashflow-text);
+  }
+
+  .zone-inventory {
+    background-color: var(--inventory-bg);
+    border-color: var(--inventory-border);
+    color: var(--inventory-text);
+  }
+
+  /* Legacy utility fallbacks mapped to clean enterprise styling */
   .glass-panel {
-    background: rgba(13, 18, 38, 0.65);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    background: rgba(17, 24, 39, 0.92);
     border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: 0 8px 32px 0 rgba(8, 11, 26, 0.37);
+    box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.25);
   }
-
-  .glass-panel-subtle {
-    background: rgba(255, 255, 255, 0.03);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-  }
-
-  .glass-panel-hover {
-    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-  .glass-panel-hover:hover {
-    background: rgba(19, 27, 56, 0.75);
-    border-color: rgba(113, 60, 255, 0.3);
-    box-shadow: 0 12px 40px -10px rgba(113, 60, 255, 0.25);
-    transform: translateY(-2px);
-  }
-
-  .glow-border-purple {
-    position: relative;
-  }
-  .glow-border-purple::before {
-    content: '';
-    position: absolute;
-    inset: -1px;
-    border-radius: inherit;
-    padding: 1px;
-    background: linear-gradient(135deg, rgba(113, 60, 255, 0.6), rgba(40, 123, 255, 0.4), rgba(0, 229, 255, 0.2));
-    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-    pointer-events: none;
-  }
-
-  .text-glow-cyan {
-    text-shadow: 0 0 20px rgba(0, 229, 255, 0.4);
-  }
-
-  .text-glow-purple {
-    text-shadow: 0 0 25px rgba(113, 60, 255, 0.5);
+  .light .glass-panel {
+    background: rgba(255, 255, 255, 0.96);
+    border: 1px solid #E2E8F0;
+    box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
   }
 
   .btn-gradient-primary {
-    background: linear-gradient(135deg, #713CFF 0%, #287BFF 50%, #00E5FF 100%);
-    background-size: 200% auto;
-    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    background: #2563EB;
+    color: #FFFFFF;
+    font-weight: 700;
+    transition: all 0.2s ease;
   }
   .btn-gradient-primary:hover {
-    background-position: right center;
-    box-shadow: 0 0 35px -5px rgba(113, 60, 255, 0.5), 0 0 25px -5px rgba(0, 229, 255, 0.35);
-    transform: translateY(-2px) scale(1.02);
+    background: #1D4ED8;
+    box-shadow: 0 4px 12px -2px rgba(37, 99, 235, 0.35);
+    transform: translateY(-1px);
   }
   .btn-gradient-primary:active {
-    transform: translateY(0) scale(0.98);
+    transform: translateY(0);
   }
 
   /* 3D Perspective Container */

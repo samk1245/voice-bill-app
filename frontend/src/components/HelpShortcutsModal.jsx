@@ -7,11 +7,11 @@ export default function HelpShortcutsModal({ isOpen, onClose }) {
   const shortcuts = [
     { key: 'Ctrl + B', action: 'Quick Voice & New Bill workspace' },
     { key: 'Ctrl + M', action: 'Switch to Manual POS Grid mode' },
-    { key: 'Ctrl + K', action: 'Focus Global Search bar' },
+    { key: 'Ctrl + K', action: 'Open Global Command Palette (Search SKU/Bills)' },
+    { key: 'Ctrl + P', action: 'Instant Retail Price & Stock Checker' },
     { key: 'Ctrl + I', action: 'Open BillMate AI Copilot' },
     { key: 'Space (in Bill)', action: 'Toggle Voice Microphone recording' },
     { key: 'Ctrl + Enter', action: 'Finalize & Save current invoice' },
-    { key: 'Ctrl + P', action: 'Print current bill receipt' },
     { key: 'Esc', action: 'Close any active modal or preview' },
   ];
 

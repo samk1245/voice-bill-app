@@ -19,6 +19,9 @@ import CameraBarcodeScannerModal from '../../components/CameraBarcodeScannerModa
 import CashDrawerReconciliationModal from '../../components/CashDrawerReconciliationModal.jsx';
 import SettingsHub from '../../components/SettingsHub.jsx';
 import CommandPalette from '../../components/CommandPalette.jsx';
+import SplitPaymentModal from '../../components/SplitPaymentModal.jsx';
+import PriceCheckerModal from '../../components/PriceCheckerModal.jsx';
+import { PALETTES, getSavedThemePalette, applyThemePalette } from '../../utils/themePalettes.js';
 import { 
   exportInvoicesToCSV, 
   exportProductsToCSV, 
@@ -140,6 +143,15 @@ export default function VendorDashboard() {
 
   // Generated Invoice for Receipt Preview Modal
   const [receiptInvoice, setReceiptInvoice] = useState(null);
+
+  // Split Payment, Price Checker & Theme System
+  const [showSplitModal, setShowSplitModal] = useState(false);
+  const [showPriceCheckerModal, setShowPriceCheckerModal] = useState(false);
+  const [activePalette, setActivePalette] = useState(() => getSavedThemePalette().id);
+  const [showMarginInCart, setShowMarginInCart] = useState(true);
+  const [inventoryRunRateFilter, setInventoryRunRateFilter] = useState('All');
+  const [inventorySearchQuery, setInventorySearchQuery] = useState('');
+  const [splitDetails, setSplitDetails] = useState(null);
 
   // Product & Inventory Management
   const [productSearch, setProductSearch] = useState('');
@@ -290,9 +302,16 @@ export default function VendorDashboard() {
         e.preventDefault();
         setShowCommandPalette(prev => !prev);
       }
+      // Ctrl + P -> Instant Price & Stock Checker
+      else if (e.ctrlKey && e.key.toLowerCase() === 'p') {
+        e.preventDefault();
+        setShowPriceCheckerModal(true);
+      }
       // Esc -> Close active modals
       else if (e.key === 'Escape') {
         setShowCommandPalette(false);
+        setShowPriceCheckerModal(false);
+        setShowSplitModal(false);
         setDeleteInvoiceModal({ isOpen: false, invoice: null, loading: false });
         setCustomerDetailModal({ isOpen: false, customer: null });
         setShowTemplateModal(false);
@@ -732,6 +751,7 @@ export default function VendorDashboard() {
             sku: product.sku || 'SKU-GEN',
             name: product.name,
             price: unitPrice,
+            costPrice: Number(product.costPrice || (unitPrice > 0 ? unitPrice * 0.75 : 0)),
             quantity: qtyToAdd,
             unit: product.unit || 'piece',
             taxRate,
@@ -904,10 +924,11 @@ export default function VendorDashboard() {
     addToast(`Added ${combo.name} (${addedCount} items) to bill!`, 'success');
   };
 
-  // Accurate Decimal Calculation Engine
+  // Accurate Decimal Calculation Engine & Live Profit Margin Analysis
   const computedTotals = useMemo(() => {
     let subtotal = 0;
     let totalTax = 0;
+    let totalCost = 0;
 
     cartItems.forEach(item => {
       const lineSubtotal = Math.round((item.price * item.quantity) * 100) / 100;
@@ -915,14 +936,22 @@ export default function VendorDashboard() {
       const lineTax = Math.round((taxable * ((item.taxRate || 0) / 100)) * 100) / 100;
       subtotal += lineSubtotal;
       totalTax += lineTax;
+
+      const unitCost = Number(item.costPrice || (item.price ? item.price * 0.75 : 0));
+      totalCost += Math.round((unitCost * item.quantity) * 100) / 100;
     });
 
     subtotal = Math.round(subtotal * 100) / 100;
     totalTax = Math.round(totalTax * 100) / 100;
+    totalCost = Math.round(totalCost * 100) / 100;
 
     const loyaltyDiscount = Math.min(Number(redeemedPoints || 0), subtotal);
     const discount = Math.round((Number(overallDiscount || 0) + loyaltyDiscount) * 100) / 100;
     const grandTotal = Math.round(Math.max(0, subtotal - discount + totalTax) * 100) / 100;
+
+    const netRevenue = Math.max(0, subtotal - discount);
+    const grossProfit = Math.round(Math.max(0, netRevenue - totalCost) * 100) / 100;
+    const profitMargin = netRevenue > 0 ? Math.round(((grossProfit / netRevenue) * 100) * 10) / 10 : 0;
 
     let paid = amountPaid !== '' ? Number(amountPaid) : null;
     if (paid === null) {
@@ -943,6 +972,9 @@ export default function VendorDashboard() {
       discount,
       totalTax,
       grandTotal,
+      totalCost,
+      grossProfit,
+      profitMargin,
       paid,
       balanceDue,
       changeReturn,
@@ -950,14 +982,149 @@ export default function VendorDashboard() {
     };
   }, [cartItems, overallDiscount, redeemedPoints, amountPaid, paymentMethod, cashReceived, isInterState]);
 
-  // Finalize & Save Bill
-  const handleFinalizeBill = async (autoPrint = false) => {
+  // Authentic Co-Occurrence Basket Association (Strictly Genuine Historical Data)
+  const smartBasketSuggestions = useMemo(() => {
+    if (cartItems.length === 0 || bills.length === 0) return [];
+    const cartProductNames = new Set(cartItems.map(i => (i.name || '').toLowerCase()));
+    const companionCounts = {};
+    let matchingBillsCount = 0;
+
+    bills.forEach(bill => {
+      if (bill.status === 'Cancelled' || !bill.items) return;
+      const billNames = bill.items.map(i => (i.name || '').toLowerCase());
+      const hasCartItem = billNames.some(name => cartProductNames.has(name));
+      if (hasCartItem) {
+        matchingBillsCount++;
+        bill.items.forEach(item => {
+          const lower = (item.name || '').toLowerCase();
+          if (!cartProductNames.has(lower)) {
+            companionCounts[lower] = (companionCounts[lower] || 0) + 1;
+          }
+        });
+      }
+    });
+
+    if (matchingBillsCount === 0) return [];
+
+    const sorted = Object.entries(companionCounts)
+      .map(([name, count]) => {
+        const product = products.find(p => (p.name || '').toLowerCase() === name);
+        const frequency = Math.round((count / matchingBillsCount) * 100);
+        return { name, count, frequency, product };
+      })
+      .filter(item => item.product && item.frequency >= 15)
+      .sort((a, b) => b.frequency - a.frequency)
+      .slice(0, 4);
+
+    return sorted;
+  }, [cartItems, bills, products]);
+
+  // Predictive Inventory Run-Rate & Days-of-Supply Engine (Authentic Math from Real Bills)
+  const inventoryAnalysis = useMemo(() => {
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const salesVelocity = {};
+
+    bills.forEach(bill => {
+      if (bill.status === 'Cancelled' || !bill.items) return;
+      const bDate = new Date(bill.createdAt);
+      if (bDate >= thirtyDaysAgo) {
+        bill.items.forEach(item => {
+          const key = (item.productId && item.productId !== 'SKU-GEN') 
+            ? item.productId 
+            : (item.name || '').toLowerCase();
+          salesVelocity[key] = (salesVelocity[key] || 0) + Number(item.quantity || 1);
+        });
+      }
+    });
+
+    return products.map(product => {
+      const pKey = product._id ? product._id : (product.name || '').toLowerCase();
+      const unitsSold30d = salesVelocity[pKey] || salesVelocity[(product.name || '').toLowerCase()] || 0;
+      const dailyRunRate = Math.round((unitsSold30d / 30) * 100) / 100;
+      const currentStock = Number(product.stock || 0);
+      
+      let daysOfSupply = 999;
+      if (dailyRunRate > 0) {
+        daysOfSupply = Math.round(currentStock / dailyRunRate);
+      } else if (currentStock === 0) {
+        daysOfSupply = 0;
+      }
+
+      let status = 'healthy';
+      if (currentStock === 0 || daysOfSupply <= 3) {
+        status = 'critical';
+      } else if (daysOfSupply <= 7) {
+        status = 'low';
+      } else if (unitsSold30d === 0) {
+        status = 'idle';
+      }
+
+      const targetStock14d = Math.max(10, Math.ceil(dailyRunRate * 14));
+      const suggestedReorderQty = Math.max(0, targetStock14d - currentStock);
+
+      const cost = Number(product.costPrice || (product.price ? product.price * 0.75 : 0));
+      const price = Number(product.price || 0);
+      const marginPct = price > 0 ? Math.round((((price - cost) / price) * 100) * 10) / 10 : 0;
+
+      return {
+        ...product,
+        unitsSold30d,
+        dailyRunRate,
+        daysOfSupply,
+        status,
+        suggestedReorderQty,
+        costPrice: cost,
+        marginPct
+      };
+    });
+  }, [products, bills]);
+
+  // 1-Click Purchase Order WhatsApp Generator
+  const handleReorderWhatsApp = (item) => {
+    const storeName = selectedStore?.name || 'VoiceBill AI Store';
+    const text = `Hello, Purchase Order from ${storeName}:\nPlease dispatch ${item.suggestedReorderQty || 20} ${item.unit || 'units'} of "${item.name}" (SKU: ${item.sku || 'N/A'}). Kindly share invoice & ETA.`;
+    const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
+  };
+
+  // Quick Stock Adjust
+  const handleQuickStockAdjust = async (productId, delta) => {
+    const product = products.find(p => p._id === productId);
+    if (!product) return;
+    const newStock = Math.max(0, Number(product.stock || 0) + delta);
+    try {
+      const res = await fetch(`/api/products/${productId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ stock: newStock })
+      });
+      if (res.ok) {
+        setProducts(prev => prev.map(p => p._id === productId ? { ...p, stock: newStock } : p));
+        addToast(`Updated stock for ${product.name} to ${newStock} units`, 'success');
+        if (soundEnabled) playClickSound();
+      }
+    } catch (err) {
+      console.error('Quick stock adjust error:', err);
+    }
+  };
+
+
+  // Finalize & Save Bill (Supports Standard & Multi-Tender Split Payment)
+  const handleFinalizeBill = async (autoPrint = false, splitData = null) => {
     if (cartItems.length === 0) {
       addToast('Cannot generate bill: Cart is empty. Please add items.', 'error');
       return;
     }
 
-    if (computedTotals.balanceDue > 0 && !cartCustomerInput.name.trim()) {
+    const effectivePaid = splitData 
+      ? Math.round((Number(splitData.cashPaid || 0) + Number(splitData.upiPaid || 0) + Number(splitData.cardPaid || 0)) * 100) / 100
+      : computedTotals.paid;
+    const effectiveBalance = Math.round(Math.max(0, computedTotals.grandTotal - effectivePaid) * 100) / 100;
+
+    if (effectiveBalance > 0 && !cartCustomerInput.name.trim()) {
       addToast('Customer Name is required when there is an unpaid balance or Udhaar.', 'error');
       return;
     }
@@ -972,12 +1139,12 @@ export default function VendorDashboard() {
         customerGstin: cartCustomerInput.gstin || '',
         items: cartItems,
         overallDiscount: computedTotals.discount,
-        paymentMethod,
-        amountPaid: computedTotals.paid,
-        cashReceived: cashReceived ? Number(cashReceived) : computedTotals.paid,
-        changeReturn: computedTotals.changeReturn,
+        paymentMethod: splitData ? 'Split (Multi-Tender)' : paymentMethod,
+        amountPaid: effectivePaid,
+        cashReceived: splitData ? (splitData.cashTendered || splitData.cashPaid) : (cashReceived ? Number(cashReceived) : computedTotals.paid),
+        changeReturn: splitData ? (splitData.cashChangeReturn || 0) : computedTotals.changeReturn,
         isInterState,
-        notes: billNotes
+        notes: splitData?.notes || billNotes
       };
 
       // Offline draft support
@@ -1222,6 +1389,12 @@ export default function VendorDashboard() {
           onOpenHelpModal={() => setShowHelpModal(true)}
           onOpenCashDrawerModal={() => setShowCashDrawerModal(true)}
           onOpenCommandPalette={() => setShowCommandPalette(true)}
+          onOpenPriceChecker={() => setShowPriceCheckerModal(true)}
+          activePalette={activePalette}
+          onChangePalette={(palKey) => {
+            applyThemePalette(palKey);
+            setActivePalette(palKey);
+          }}
           globalSearch={globalSearch}
           setGlobalSearch={setGlobalSearch}
           onNewBillClick={() => setActiveTab('billing')}
@@ -1667,6 +1840,36 @@ export default function VendorDashboard() {
                       )}
                     </div>
 
+                    {/* Authentic Co-Occurrence Basket Recommendations (Zero Hallucination) */}
+                    {smartBasketSuggestions.length > 0 && (
+                      <div className="pt-2 pb-1 border-t border-slate-100 dark:border-navy-700">
+                        <div className="flex items-center gap-1.5 text-[11px] font-bold text-blue-600 dark:text-blue-400 mb-1.5">
+                          <Sparkles className="h-3.5 w-3.5" />
+                          <span>Customers Also Bought (Store History):</span>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {smartBasketSuggestions.map(rec => (
+                            <button
+                              key={rec.name}
+                              type="button"
+                              onClick={() => {
+                                addItemToCart(rec.product, 1);
+                                if (soundEnabled) playScanBeep();
+                                addToast(`Added ${rec.product.name} to bill`, 'success');
+                              }}
+                              className="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/40 dark:hover:bg-blue-900/60 border border-blue-200 dark:border-blue-800 text-[11px] font-medium text-blue-700 dark:text-blue-300 transition flex items-center gap-1.5 active:scale-95"
+                              title={`${rec.frequency}% of past customer baskets with these items also included ${rec.product.name}`}
+                            >
+                              <Plus className="h-3 w-3" />
+                              <span>{rec.product.name}</span>
+                              <span className="font-bold">({currency}{rec.product.price})</span>
+                              <span className="text-[10px] text-blue-500 font-mono">[{rec.frequency}%]</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Calculation Summary Breakdown */}
                     <div className="pt-3 border-t border-slate-200 dark:border-navy-700 space-y-1.5 text-xs">
                       <div className="flex justify-between text-slate-500 dark:text-slate-400">
@@ -1683,29 +1886,81 @@ export default function VendorDashboard() {
                           <span>-₹{computedTotals.discount}</span>
                         </div>
                       )}
+
+                      {/* Gross Profit Margin Analysis */}
+                      <div className="flex items-center justify-between text-xs py-1 border-t border-slate-100 dark:border-navy-700/60">
+                        <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+                          <span>Gross Margin</span>
+                          <button
+                            type="button"
+                            onClick={() => setShowMarginInCart(!showMarginInCart)}
+                            className="text-xs hover:opacity-80 transition"
+                            title={showMarginInCart ? "Conceal margin from customer" : "Show profit margin"}
+                          >
+                            {showMarginInCart ? '👁️' : '🙈'}
+                          </button>
+                        </div>
+                        {showMarginInCart ? (
+                          <span className={`font-bold font-mono px-2 py-0.5 rounded-md text-[11px] ${
+                            computedTotals.profitMargin >= 25 
+                              ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
+                              : computedTotals.profitMargin >= 15
+                                ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400 border border-amber-200 dark:border-amber-800'
+                                : 'bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400 border border-rose-200 dark:border-rose-800'
+                          }`}>
+                            +{currency}{computedTotals.grossProfit} ({computedTotals.profitMargin}%)
+                          </span>
+                        ) : (
+                          <span className="text-slate-400 text-xs italic">Hidden</span>
+                        )}
+                      </div>
+
                       <div className="pt-2 border-t border-slate-200 dark:border-navy-700 flex justify-between items-baseline">
                         <span className="text-sm font-bold text-slate-900 dark:text-white">Grand Total</span>
-                        <span className="text-2xl font-black text-violet-600 dark:text-violet-400">₹{computedTotals.grandTotal}</span>
+                        <span className="text-2xl font-black text-blue-600 dark:text-blue-400">₹{computedTotals.grandTotal}</span>
                       </div>
                     </div>
 
                     {/* Payment Mode Selector */}
                     <div className="space-y-2 pt-2">
-                      <div className="grid grid-cols-4 gap-1.5 text-xs font-semibold">
-                        {['Cash', 'UPI', 'Card', 'Udhaar'].map(mode => (
+                      <div className="grid grid-cols-5 gap-1.5 text-xs font-semibold">
+                        {['Cash', 'UPI', 'Card', 'Split', 'Udhaar'].map(mode => (
                           <button
                             key={mode}
-                            onClick={() => setPaymentMethod(mode === 'Udhaar' ? 'Credit/Udhaar' : mode)}
+                            onClick={() => {
+                              if (mode === 'Split') {
+                                setPaymentMethod('Split');
+                                setShowSplitModal(true);
+                              } else {
+                                setPaymentMethod(mode === 'Udhaar' ? 'Credit/Udhaar' : mode);
+                              }
+                            }}
                             className={`py-2 rounded-xl border text-center transition ${
                               (paymentMethod === mode || (mode === 'Udhaar' && paymentMethod === 'Credit/Udhaar'))
-                                ? 'bg-violet-600 text-white border-violet-600 shadow-sm font-bold'
-                                : 'bg-slate-50 dark:bg-navy-900 border-slate-200 dark:border-navy-700 text-slate-600 dark:text-slate-300'
+                                ? 'bg-blue-600 text-white border-blue-600 shadow-sm font-bold'
+                                : 'bg-slate-50 dark:bg-navy-900 border-slate-200 dark:border-navy-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100'
                             }`}
                           >
                             {mode}
                           </button>
                         ))}
                       </div>
+
+                      {/* Split Payment Breakdown Badge */}
+                      {paymentMethod === 'Split' && splitDetails && (
+                        <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-xs flex items-center justify-between">
+                          <div className="text-emerald-800 dark:text-emerald-300 font-semibold truncate">
+                            Split: Cash {currency}{splitDetails.cashPaid} + UPI {currency}{splitDetails.upiPaid}{splitDetails.cardPaid ? ` + Card ${currency}${splitDetails.cardPaid}` : ''}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setShowSplitModal(true)}
+                            className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline flex-shrink-0 ml-2"
+                          >
+                            Edit
+                          </button>
+                        </div>
+                      )}
 
                       {/* Cash Tender & Change Calculator */}
                       {paymentMethod === 'Cash' && (
@@ -1715,7 +1970,7 @@ export default function VendorDashboard() {
                             placeholder="Cash Tendered (₹)"
                             value={cashReceived}
                             onChange={(e) => setCashReceived(e.target.value)}
-                            className="flex-1 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-navy-900 border border-slate-200 dark:border-navy-700 text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-violet-500"
+                            className="flex-1 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-navy-900 border border-slate-200 dark:border-navy-700 text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
                           />
                           {computedTotals.changeReturn > 0 && (
                             <span className="px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 font-bold">
@@ -1970,36 +2225,244 @@ export default function VendorDashboard() {
                 <div>
                   <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
                     <AlertTriangle className="h-6 w-6 text-amber-500" />
-                    Stock & Inventory Health
+                    Predictive Stock & Inventory Run-Rate Advisor
                   </h1>
                   <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-                    Real-time stock quantities, low-stock warnings, and inventory audit logs.
+                    Real-time sales velocity, days-of-supply forecasts, and 1-click supplier purchase orders.
                   </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      const ok = exportProductsToCSV(products);
+                      if (ok) addToast('Exported inventory catalog to CSV!', 'success');
+                    }}
+                    className="px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:text-amber-600 font-semibold text-xs flex items-center gap-1.5 transition shadow-sm"
+                  >
+                    <Download className="h-4 w-4" />
+                    <span>Export CSV</span>
+                  </button>
+                  <button
+                    onClick={() => setShowProductModal(true)}
+                    className="px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs flex items-center gap-1.5 transition shadow-sm"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span>Add New SKU</span>
+                  </button>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="p-4 rounded-2xl bg-white dark:bg-navy-800 border border-slate-200 dark:border-navy-700 shadow-card-soft">
-                  <span className="text-xs text-slate-500 font-semibold">TOTAL PRODUCTS IN STOCK</span>
+              {/* 4 KPI Cards (Terracotta + Sand + Forest Green Palette) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">TOTAL STOCK IN WAREHOUSE</span>
                   <div className="text-2xl font-black text-slate-900 dark:text-white mt-1">
                     {products.reduce((acc, p) => acc + (!p.isService ? Number(p.stock || 0) : 0), 0)} Units
                   </div>
+                  <span className="text-[11px] text-slate-400 mt-0.5 block">{products.length} catalog items</span>
                 </div>
-                <div className="p-4 rounded-2xl bg-white dark:bg-navy-800 border border-slate-200 dark:border-navy-700 shadow-card-soft">
-                  <span className="text-xs text-slate-500 font-semibold">LOW STOCK ALERTS</span>
-                  <div className="text-2xl font-black text-rose-500 mt-1">
-                    {products.filter(p => !p.isService && Number(p.stock) <= Number(p.lowStockAlertLimit || 10)).length} Items
+
+                <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-rose-200 dark:border-rose-900/40 shadow-sm">
+                  <span className="text-[10px] text-rose-500 font-bold uppercase tracking-wider">CRITICAL STOCKOUTS (≤ 3 DAYS)</span>
+                  <div className="text-2xl font-black text-rose-600 dark:text-rose-400 mt-1">
+                    {inventoryAnalysis.filter(p => p.status === 'critical').length} Items
                   </div>
+                  <span className="text-[11px] text-rose-500/80 mt-0.5 block">Urgent supplier reorder needed</span>
                 </div>
-                <div className="p-4 rounded-2xl bg-white dark:bg-navy-800 border border-slate-200 dark:border-navy-700 shadow-card-soft">
-                  <span className="text-xs text-slate-500 font-semibold">INVENTORY VALUATION</span>
-                  <div className="text-2xl font-black text-emerald-500 mt-1">
+
+                <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-amber-200 dark:border-amber-900/40 shadow-sm">
+                  <span className="text-[10px] text-amber-500 font-bold uppercase tracking-wider">REORDER SOON (≤ 7 DAYS)</span>
+                  <div className="text-2xl font-black text-amber-600 dark:text-amber-400 mt-1">
+                    {inventoryAnalysis.filter(p => p.status === 'low').length} Items
+                  </div>
+                  <span className="text-[11px] text-amber-500/80 mt-0.5 block">Stock depleting faster than buffer</span>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-emerald-200 dark:border-emerald-900/40 shadow-sm">
+                  <span className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider">INVENTORY COST VALUATION</span>
+                  <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
                     ₹{products.reduce((acc, p) => acc + (!p.isService ? (Number(p.costPrice || p.price * 0.8) * Number(p.stock || 0)) : 0), 0).toLocaleString('en-IN')}
                   </div>
+                  <span className="text-[11px] text-emerald-600/80 mt-0.5 block">Total capital in inventory</span>
+                </div>
+              </div>
+
+              {/* Filter Toolbar */}
+              <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+                <div className="flex items-center gap-1.5 overflow-x-auto text-xs">
+                  {[
+                    { id: 'All', label: 'All Items' },
+                    { id: 'critical', label: 'Critical (≤ 3d)', count: inventoryAnalysis.filter(p => p.status === 'critical').length },
+                    { id: 'low', label: 'Low Stock (≤ 7d)', count: inventoryAnalysis.filter(p => p.status === 'low').length },
+                    { id: 'healthy', label: 'Healthy (> 7d)', count: inventoryAnalysis.filter(p => p.status === 'healthy').length },
+                    { id: 'idle', label: 'Idle / No Sales', count: inventoryAnalysis.filter(p => p.status === 'idle').length }
+                  ].map(tab => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setInventoryRunRateFilter(tab.id)}
+                      className={`px-3 py-1.5 rounded-xl font-bold transition whitespace-nowrap flex items-center gap-1.5 ${
+                        inventoryRunRateFilter === tab.id
+                          ? 'bg-amber-700 text-white shadow-sm'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+                      }`}
+                    >
+                      <span>{tab.label}</span>
+                      {tab.count !== undefined && (
+                        <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+                          inventoryRunRateFilter === tab.id ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
+                        }`}>
+                          {tab.count}
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="relative min-w-[240px]">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Search product, SKU or category..."
+                    value={inventorySearchQuery}
+                    onChange={(e) => setInventorySearchQuery(e.target.value)}
+                    className="w-full pl-9 pr-3 py-2 rounded-xl text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                  />
+                </div>
+              </div>
+
+              {/* Predictive Velocity Table */}
+              <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs text-left">
+                    <thead className="bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 uppercase text-[10px] font-semibold border-b border-slate-200 dark:border-slate-700">
+                      <tr>
+                        <th className="py-3 px-4">Product / SKU</th>
+                        <th className="py-3 px-3">Stock Units</th>
+                        <th className="py-3 px-3">Cost / Sell Price</th>
+                        <th className="py-3 px-3">Gross Margin</th>
+                        <th className="py-3 px-3">Daily Velocity</th>
+                        <th className="py-3 px-3">Days of Supply</th>
+                        <th className="py-3 px-3">Suggested PO Qty</th>
+                        <th className="py-3 px-4 text-right">Quick Supplier Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                      {inventoryAnalysis
+                        .filter(item => {
+                          if (inventoryRunRateFilter !== 'All' && item.status !== inventoryRunRateFilter) return false;
+                          if (!inventorySearchQuery.trim()) return true;
+                          const q = inventorySearchQuery.toLowerCase();
+                          return (item.name && item.name.toLowerCase().includes(q)) ||
+                                 (item.sku && item.sku.toLowerCase().includes(q)) ||
+                                 (item.category && item.category.toLowerCase().includes(q));
+                        })
+                        .map(item => (
+                          <tr key={item._id || item.name} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
+                            <td className="py-3 px-4">
+                              <div className="font-bold text-slate-900 dark:text-white">{item.name}</div>
+                              <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                                SKU: {item.sku || 'SKU-000'} • {item.category || 'General'}
+                              </div>
+                            </td>
+                            <td className="py-3 px-3">
+                              <div className="flex items-center gap-1.5">
+                                <span className={`font-mono font-bold text-sm ${
+                                  Number(item.stock) <= 0 
+                                    ? 'text-rose-600 dark:text-rose-400' 
+                                    : Number(item.stock) <= 5 
+                                      ? 'text-amber-600 dark:text-amber-400' 
+                                      : 'text-slate-900 dark:text-white'
+                                }`}>
+                                  {item.stock ?? 0}
+                                </span>
+                                <span className="text-[10px] text-slate-400">{item.unit || 'pcs'}</span>
+                              </div>
+                            </td>
+                            <td className="py-3 px-3 font-mono">
+                              <div className="text-slate-900 dark:text-white font-semibold">₹{item.price}</div>
+                              <div className="text-[10px] text-slate-400">Cost: ₹{item.costPrice}</div>
+                            </td>
+                            <td className="py-3 px-3 font-mono">
+                              <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${
+                                item.marginPct >= 25 
+                                  ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400' 
+                                  : 'bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400'
+                              }`}>
+                                {item.marginPct}%
+                              </span>
+                            </td>
+                            <td className="py-3 px-3 font-mono">
+                              <div className="font-bold text-slate-800 dark:text-slate-200">
+                                {item.dailyRunRate > 0 ? `${item.dailyRunRate}/day` : '0/day'}
+                              </div>
+                              <div className="text-[10px] text-slate-400">
+                                {item.unitsSold30d} sold in 30d
+                              </div>
+                            </td>
+                            <td className="py-3 px-3">
+                              {item.status === 'critical' ? (
+                                <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300 border border-rose-300 dark:border-rose-800 flex items-center gap-1 w-max">
+                                  <AlertTriangle className="h-3 w-3" />
+                                  <span>{item.daysOfSupply}d (Critical)</span>
+                                </span>
+                              ) : item.status === 'low' ? (
+                                <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 dark:border-amber-800 flex items-center gap-1 w-max">
+                                  <span>{item.daysOfSupply}d (Low)</span>
+                                </span>
+                              ) : item.status === 'healthy' ? (
+                                <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 flex items-center gap-1 w-max">
+                                  <span>{item.daysOfSupply > 90 ? '90+d' : `${item.daysOfSupply}d`} (Healthy)</span>
+                                </span>
+                              ) : (
+                                <span className="px-2.5 py-1 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border border-slate-300 dark:border-slate-700">
+                                  Idle Stock
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-3 px-3 font-mono font-bold text-amber-600 dark:text-amber-400">
+                              {item.suggestedReorderQty > 0 ? `+${item.suggestedReorderQty} ${item.unit || 'units'}` : 'Sufficient'}
+                            </td>
+                            <td className="py-3 px-4 text-right">
+                              <div className="flex items-center justify-end gap-1.5">
+                                {/* Quick Adjust buttons */}
+                                <div className="flex items-center border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden bg-slate-50 dark:bg-slate-800">
+                                  <button
+                                    onClick={() => handleQuickStockAdjust(item._id, -1)}
+                                    className="px-1.5 py-0.5 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 font-bold"
+                                    title="Decrease stock by 1"
+                                  >
+                                    -
+                                  </button>
+                                  <button
+                                    onClick={() => handleQuickStockAdjust(item._id, 1)}
+                                    className="px-1.5 py-0.5 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 font-bold"
+                                    title="Increase stock by 1"
+                                  >
+                                    +
+                                  </button>
+                                </div>
+
+                                {/* Order WhatsApp button */}
+                                <button
+                                  onClick={() => handleReorderWhatsApp(item)}
+                                  className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-[11px] flex items-center gap-1 transition shadow-sm"
+                                  title="Draft WhatsApp Purchase Order to Supplier"
+                                >
+                                  <Send className="h-3 w-3" />
+                                  <span>Order PO</span>
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </div>
           )}
+
 
           {/* =========================================================================
               TAB 6: INVOICES & BILL HISTORY
@@ -2807,6 +3270,7 @@ export default function VendorDashboard() {
         toggleDarkMode={toggleDarkMode}
         onStartVoice={toggleRecording}
         onNewBill={handleClearCart}
+        onOpenPriceChecker={() => setShowPriceCheckerModal(true)}
         onOpenCashDrawer={() => setShowCashDrawerModal(true)}
         onOpenTemplateModal={() => setShowTemplateModal(true)}
         onAskBillMate={(p) => {
@@ -2968,6 +3432,33 @@ export default function VendorDashboard() {
           </button>
         </div>
       )}
+
+      {/* Multi-Tender Split Payment Modal */}
+      <SplitPaymentModal
+        isOpen={showSplitModal}
+        onClose={() => setShowSplitModal(false)}
+        grandTotal={computedTotals.grandTotal}
+        currency={currency}
+        customerName={cartCustomerInput.name || cartCustomer?.name || ''}
+        storeUpiId={selectedStore?.upiId || 'billing@okaxis'}
+        storeName={selectedStore?.name || 'VoiceBill AI Store'}
+        onConfirmSplit={(splitData) => {
+          setSplitDetails(splitData);
+          handleFinalizeBill(false, splitData);
+        }}
+      />
+
+      {/* Instant Retail Price & Stock Checker Modal (Ctrl+P) */}
+      <PriceCheckerModal
+        isOpen={showPriceCheckerModal}
+        onClose={() => setShowPriceCheckerModal(false)}
+        products={products}
+        currency={currency}
+        onAddToCart={(product, qty) => {
+          addItemToCart(product, qty);
+          addToast(`Added ${qty}x ${product.name} to active bill`, 'success');
+        }}
+      />
 
       {/* Toast Notifications Overlay */}
       <div className="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm pointer-events-none">
